@@ -546,6 +546,47 @@
   .course-intro p{color:var(--muted); line-height:1.65; margin:0 0 12px; font-size:16.5px; max-width:52em}
   .course-intro p strong{color:#fff}
   .course-intro p:last-of-type{margin-bottom:0}
+  /* vocal course intro — compact player at the top of the course page */
+  .course-voice-intro{
+    display:flex; align-items:center; gap:14px;
+    border-radius:18px; padding:13px 16px; margin-bottom:18px;
+    border:1px solid rgba(255,130,155,.40); color:var(--ink);
+    background:linear-gradient(155deg, rgba(220,20,60,.14), rgba(220,20,60,.05) 55%, rgba(220,20,60,.08));
+    backdrop-filter:blur(8px) saturate(150%); -webkit-backdrop-filter:blur(8px) saturate(150%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 10px 22px rgba(0,0,0,.28);
+  }
+  .cvi-play{
+    flex:none; width:46px; height:46px; border-radius:50%; border:1px solid rgba(255,190,205,.65);
+    background:linear-gradient(145deg, #e8163f, #a30f2e); color:#fff; cursor:pointer;
+    display:grid; place-items:center; padding:0;
+    box-shadow:0 8px 20px rgba(220,20,60,.42), inset 0 1px 0 rgba(255,255,255,.35);
+    transition:transform .15s ease, background .15s ease;
+  }
+  .cvi-play:hover{background:linear-gradient(145deg, #f21b4d, #c01236); transform:scale(1.04)}
+  .cvi-play:focus-visible{outline:2px solid var(--amber); outline-offset:3px}
+  .cvi-play .cvi-ico-play{font-size:16px; line-height:1; margin-left:2px}
+  .cvi-play .cvi-ico-pause{font-size:13px; line-height:1; letter-spacing:1px; display:none}
+  .course-voice-intro.is-playing .cvi-play .cvi-ico-play{display:none}
+  .course-voice-intro.is-playing .cvi-play .cvi-ico-pause{display:block}
+  .cvi-copy{flex:1; min-width:0}
+  .cvi-label{display:block; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--rose); margin-bottom:3px}
+  .cvi-quote{display:block; font-size:15.5px; line-height:1.4; color:#fff; font-weight:600}
+  .cvi-progress{height:3px; border-radius:999px; background:rgba(255,255,255,.14); margin-top:9px; overflow:hidden}
+  .cvi-bar{display:block; height:100%; width:0%; background:linear-gradient(90deg, var(--red-soft), var(--amber)); border-radius:999px; transition:width .2s linear}
+  .cvi-right{flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px}
+  .cvi-time{font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.08em; color:var(--faint)}
+  .cvi-eq{display:flex; gap:3px; align-items:flex-end; height:12px; opacity:0; transition:opacity .2s ease}
+  .course-voice-intro.is-playing .cvi-eq{opacity:1}
+  .cvi-eq i{display:block; width:3px; background:var(--amber); border-radius:2px; animation:cviEq 0.9s ease-in-out infinite}
+  .cvi-eq i:nth-child(1){height:7px} .cvi-eq i:nth-child(2){height:11px; animation-delay:.15s} .cvi-eq i:nth-child(3){height:6px; animation-delay:.3s} .cvi-eq i:nth-child(4){height:10px; animation-delay:.45s}
+  @keyframes cviEq{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
+  @media (prefers-reduced-motion: reduce){ .cvi-eq i{animation:none} .cvi-play{transition:none} }
+  @media (max-width:520px){
+    .course-voice-intro{padding:12px 13px; gap:11px}
+    .cvi-play{width:42px; height:42px}
+    .cvi-quote{font-size:14.5px}
+    .cvi-right{display:none}
+  }
   .course-facts{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px}
   .course-facts .chip b{color:var(--amber)}
   .module{
@@ -1155,6 +1196,23 @@
         <h2>Personal Safety and Situational Awareness</h2>
       </div>
       <p><strong style="color:#fff">Learn to spot danger before it spots you.</strong> A free video course from Ian — narrated video lessons for everyday life in Trinidad &amp; Tobago. Press play and learn.</p>
+    </div>
+
+    <div class="course-voice-intro" id="courseVoiceIntro">
+      <button class="cvi-play" id="courseIntroPlay" type="button" aria-label="Play course intro" aria-pressed="false">
+        <span class="cvi-ico-play" aria-hidden="true">▶</span>
+        <span class="cvi-ico-pause" aria-hidden="true">❚❚</span>
+      </button>
+      <div class="cvi-copy">
+        <span class="cvi-label">▶ Play Course Intro</span>
+        <span class="cvi-quote">“This course is brought to you by the IAN Network, simply because we care.”</span>
+        <div class="cvi-progress" aria-hidden="true"><span class="cvi-bar" id="courseIntroBar"></span></div>
+      </div>
+      <div class="cvi-right" aria-hidden="true">
+        <span class="cvi-eq"><i></i><i></i><i></i><i></i></span>
+        <span class="cvi-time" id="courseIntroTime">0:00</span>
+      </div>
+      <audio id="courseIntroAudio" src="assets/course-intro.mp3" preload="metadata"></audio>
     </div>
 
     <div class="course-intro">
@@ -2209,6 +2267,60 @@
     if (!document.hidden) playVisible();
   });
   window.addEventListener('load', playVisible);
+})();
+</script>
+<script>
+(function(){
+  // Vocal course intro — "This course is brought to you by the IAN
+  // Network, simply because we care." (Ethan, the course narrator).
+  // Bundled locally as assets/course-intro.mp3; never autoplays —
+  // the visitor taps Play. Compact crimson-glass player at the top
+  // of the course page view only.
+  var wrap = document.getElementById('courseVoiceIntro');
+  var btn = document.getElementById('courseIntroPlay');
+  var audio = document.getElementById('courseIntroAudio');
+  var bar = document.getElementById('courseIntroBar');
+  var timeEl = document.getElementById('courseIntroTime');
+  if (!wrap || !btn || !audio) return;
+  function fmt(s){
+    if (!isFinite(s) || s < 0) s = 0;
+    s = Math.floor(s);
+    return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+  function setPlaying(on){
+    wrap.classList.toggle('is-playing', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.setAttribute('aria-label', on ? 'Pause course intro' : 'Play course intro');
+  }
+  btn.addEventListener('click', function(){
+    if (audio.paused){
+      var p = audio.play();
+      if (p && p.catch) p.catch(function(){ setPlaying(false); });
+    } else {
+      audio.pause();
+    }
+  });
+  audio.addEventListener('play', function(){ setPlaying(true); });
+  audio.addEventListener('pause', function(){ setPlaying(false); });
+  audio.addEventListener('ended', function(){
+    setPlaying(false);
+    if (bar) bar.style.width = '0%';
+    if (timeEl) timeEl.textContent = '0:00';
+    try { audio.currentTime = 0; } catch(e){}
+  });
+  audio.addEventListener('loadedmetadata', function(){
+    if (timeEl && isFinite(audio.duration)) timeEl.textContent = '0:00 / ' + fmt(audio.duration);
+  });
+  audio.addEventListener('timeupdate', function(){
+    if (!isFinite(audio.duration) || !audio.duration) return;
+    var pct = (audio.currentTime / audio.duration) * 100;
+    if (bar) bar.style.width = pct.toFixed(1) + '%';
+    if (timeEl) timeEl.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration);
+  });
+  // If the visitor leaves the course view while it is playing, stop it.
+  window.addEventListener('hashchange', function(){
+    if (window.location.hash !== '#/course' && !audio.paused) audio.pause();
+  });
 })();
 </script>
 </body>

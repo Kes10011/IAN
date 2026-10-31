@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="dark" />
 <meta name="description" content="Ian Alleyne — I.A.N Network. Crime Watch, weekdays at 5:45 p.m. Breaking news and anonymous crime reports for Trinidad & Tobago." />
-<link rel="icon" href="data:," />
+<link rel="icon" type="image/png" href="assets/ian-logo.png" />
 <title>Ian Alleyne — I.A.N Network | Crime Watch Trinidad &amp; Tobago</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -195,18 +195,23 @@
     border-bottom:1px solid rgba(255,130,155,.32);
     box-shadow:0 16px 38px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.30), inset 0 -1px 0 rgba(255,255,255,.06);
   }
-  .bar-in{display:flex; align-items:center; gap:14px; padding:12px 0; flex-wrap:wrap}
+  /* side padding matches .wrap's 20px inset — the old padding:12px 0 zeroed
+     it, leaving the header flush to the screen edges (fine for the old text
+     brand, but it clipped the exact logo's artwork on phones) */
+  .bar-in{display:flex; align-items:center; gap:14px; padding:12px 20px; flex-wrap:wrap}
   .brand{display:flex; align-items:center; gap:12px; text-decoration:none; margin-right:auto}
-  .brand-mark{
-    width:42px; height:42px; border-radius:10px; flex:none;
-    border:1.5px solid var(--red); display:grid; place-items:center;
-    font-family:"JetBrains Mono",monospace; font-weight:700; font-size:13px; color:#fff;
-    background:linear-gradient(145deg, rgba(220,20,60,.16), rgba(220,20,60,.05));
-    position:relative;
+  /* Ian's exact logo — the real I.A.N mark (assets/ian-logo.png, from
+     ianalleyne.org): red custom I.A.N lettering over the red
+     IAN ALLEYNE NETWORK bar, transparent PNG shown as-is */
+  .brand-logo{height:54px; width:auto; flex:none; filter:drop-shadow(0 2px 10px rgba(0,0,0,.45))}
+  /* phone header row: logo + WhatsApp + Menu must share one row without
+     clipping the logo — slim all three down under 520px */
+  @media (max-width:520px){
+    .brand-logo{height:37px}
+    .bar-in{gap:9px}
+    .bar-in>.btn-wa{padding:8px 12px; font-size:13.5px}
+    .menu-btn{padding:8px 12px; font-size:13.5px}
   }
-  .brand-mark::after{content:""; position:absolute; inset:5px; border:1px solid rgba(255,255,255,.25); border-radius:6px}
-  .brand b{font-family:"Barlow Condensed",sans-serif; font-size:24px; letter-spacing:.06em; line-height:1; display:block}
-  .brand small{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.22em; color:var(--amber); text-transform:uppercase}
   nav.links{display:flex; gap:6px; flex-wrap:wrap}
   nav.links a{
     text-decoration:none; font-weight:600; font-size:14.5px; color:#ffe9e5;
@@ -738,8 +743,7 @@
 <header class="bar">
   <div class="wrap bar-in">
     <a class="brand" href="#top" aria-label="I.A.N Network home">
-      <span class="brand-mark">IAN</span>
-      <span><b>IAN ALLEYNE</b><small>I.A.N Network · Crime Watch</small></span>
+      <img class="brand-logo" src="assets/ian-logo.png" width="671" height="306" alt="I.A.N — Ian Alleyne Network" />
     </a>
     <nav class="links" id="siteNav" aria-label="Site">
       <a href="#latest">Latest</a>

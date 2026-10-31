@@ -1,9 +1,0 @@
-{
-  "schema_version": "hatch.probe_ui_session.v1",
-  "socket": "/home/hatch/workspace/ts-spaces/ian-alleyne-site-rebuild/.harness/probe-ui/sock",
-  "slug": "ian-alleyne-site-rebuild",
-  "url": "https://artifact-capture.invalid/spaces/v2/hatch-audit-99b24445-cad2-45a0-8dcd-adcd4c944e28/",
-  "audit_session_id": "f2c653ee-f214-4424-94da-c27c942edd92",
-  "pid": 11502,
-  "phone_first": true
-}

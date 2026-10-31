@@ -4,3 +4,7 @@ AGENTS.md
 space.json
 icon.webp
 .git/
+
+.harness/
+.space-build/
+.space-build-cvm/

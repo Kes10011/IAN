@@ -162,17 +162,13 @@
   .hud-tag.t2{top:58%; right:6.5%}
   .hud-tag.t3{bottom:9%; left:38%}
   .hud-plus{position:absolute; font-family:"JetBrains Mono",monospace; font-size:15px; color:rgba(255,110,140,.75); line-height:1; text-shadow:0 0 3px rgba(255,45,85,.25)}
-  .range-ruler{position:absolute; right:14px; top:31%; display:flex; flex-direction:column; gap:20px; opacity:.55}
-  .range-ruler span{display:flex; align-items:center; gap:6px; justify-content:flex-end; font-family:"JetBrains Mono",monospace; font-size:8.5px; letter-spacing:.12em; color:#ffc2d1}
-  .range-ruler span::after{content:""; width:16px; height:1px; background:rgba(255,90,125,.80); box-shadow:0 0 2px rgba(255,45,85,.20)}
-  .range-ruler span:nth-child(even)::after{width:9px}
   .hud-corner{position:absolute; width:22px; height:22px; border:1.5px solid rgba(255,110,140,.70); filter:drop-shadow(0 0 2px rgba(255,45,85,.18))}
   .hud-corner.tl{top:84px; left:14px; border-right:none; border-bottom:none}
   .hud-corner.tr{top:84px; right:14px; border-left:none; border-bottom:none}
   .hud-corner.bl{bottom:14px; left:14px; border-right:none; border-top:none}
   .hud-corner.br{bottom:14px; right:14px; border-left:none; border-top:none}
   @media (max-width:640px){
-    .range-ruler,.hud-tag.t3{display:none}
+    .hud-tag.t3{display:none}
     .scope-drift{opacity:.20}
     .scope-drift.small{opacity:.12}
     .laser-wrap{opacity:.65}
@@ -791,8 +787,6 @@
         </g>
         <text x="208" y="42" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="2" fill="#ffd6de">RNG 184M</text>
         <text x="208" y="368" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="2" fill="rgba(255,214,222,.90)">MIL 3.2 · WND 0</text>
-        <text x="24" y="192" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="2" fill="rgba(255,214,222,.85)">100</text>
-        <text x="352" y="192" font-family="JetBrains Mono, monospace" font-size="9" letter-spacing="2" fill="rgba(255,214,222,.85)">300</text>
       </svg>
     </div>
     <div class="scope-drift small">
@@ -811,7 +805,6 @@
     <span class="hud-plus" style="top:38%;left:7%">+</span>
     <span class="hud-plus" style="top:70%;right:9%">+</span>
     <span class="hud-plus" style="top:12%;right:26%">+</span>
-    <div class="range-ruler" aria-hidden="true"><span>100M</span><span>200M</span><span>300M</span><span>400M</span><span>500M</span></div>
     <span class="hud-corner tl"></span><span class="hud-corner tr"></span><span class="hud-corner bl"></span><span class="hud-corner br"></span>
   </div>
 </div>
@@ -903,8 +896,6 @@
             <!-- scope readouts -->
             <text x="214" y="34" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700" letter-spacing="2" fill="#ffffff" stroke="rgba(120,0,20,.9)" stroke-width="3" paint-order="stroke">RNG 184M</text>
             <text x="214" y="322" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" letter-spacing="2" fill="#ffd6de" stroke="rgba(120,0,20,.9)" stroke-width="3" paint-order="stroke">MIL 3.2 · LOCK</text>
-            <text x="30" y="162" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" letter-spacing="1" fill="#fff" stroke="rgba(120,0,20,.9)" stroke-width="3" paint-order="stroke">100</text>
-            <text x="338" y="162" font-family="JetBrains Mono, monospace" font-size="12" font-weight="700" letter-spacing="1" fill="#fff" stroke="rgba(120,0,20,.9)" stroke-width="3" paint-order="stroke">300</text>
           </svg>
           <span class="hud hud-tl">● Rec · I.A.N Cam 01</span>
           <span class="hud hud-tr">Target Locked</span>

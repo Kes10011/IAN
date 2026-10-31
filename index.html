@@ -309,16 +309,27 @@
   .scope figure{margin:0; position:relative; border-radius:16px; overflow:hidden; aspect-ratio:4/3.4; perspective:900px; touch-action:pan-y; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; will-change:transform}
   /* hero photo: ONE photo (ian-hero.jpg), depth-warped per-pixel by a WebGL
      canvas sampling the MiDaS depth map, driven by mouse AND touch alike.
-     FAIL-SAFE LAYERING: the plain <img> stays VISIBLE underneath the canvas
-     at all times — the canvas only ever paints OVER a photo that is already
-     on screen. If the WebGL path dies on a device (GPU context loss under
-     memory pressure from the page's autoplaying videos, an incomplete /
-     black texture on a phone GPU — the failure that left a black shadow
-     where Ian was), the script drops the canvas and the real photo is
-     simply still there. The photo can never be hidden by the effect. */
+     SINGLE-SURFACE RULE (the persistent outline fix): while the depth
+     canvas is live it is the ONLY visible copy of the photo, and it is
+     NEVER CSS-transformed — the whole motion (base shift + depth warp)
+     is computed inside its one fragment shader from one eased uniform,
+     so Ian and the space around him are painted in the same GPU pass
+     and cannot drift apart. The old build CSS-translated BOTH the <img>
+     and the canvas while ALSO shifting pixels inside the canvas: on a
+     real phone GPU the WebGL surface presents a frame behind the
+     compositor-driven CSS layers, so mid-motion his CSS-moved copy and
+     his depth-warped copy sat a frame apart and the gap drew his
+     outline — invisible in stills and on the preview's software
+     renderer, plain on the deployed link on a real device.
+     FAIL-SAFE: the <img> is the fallback, not a backdrop. It stays
+     visible until the canvas has drawn one verified-good frame; only
+     then does depth-on hide it. If WebGL dies at any point (context
+     loss, dead texture), depth-on drops, the canvas hides and the
+     <img> — now the single moving layer, CSS-driven — is simply there. */
   .scope img.hero-photo{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; aspect-ratio:auto; z-index:1; transform:none; will-change:transform}
-  .scope canvas.hero-depth{position:absolute; inset:0; width:100%; height:100%; z-index:2; display:none; will-change:transform}
+  .scope canvas.hero-depth{position:absolute; inset:0; width:100%; height:100%; z-index:2; display:none}
   .scope figure.depth-on canvas.hero-depth{display:block}
+  .scope figure.depth-on img.hero-photo{visibility:hidden}
   /* the hero scope + reticle overlay the WHOLE frame, Ian included — a real
      viewfinder's reticle sits over the subject ("TARGET LOCKED"). They used
      to be hidden across his silhouette by an Ian-shaped alpha mask
@@ -1601,27 +1612,29 @@
   // samples the MiDaS depth map (assets/ian1-depth.png, 1280x853,
   // pixel-aligned with the photo assets/ian-hero.jpg; brighter = closer)
   // and offsets that pixel along the eased mouse vector IN PROPORTION TO
-  // ITS DEPTH: the head and pointing hand (brightest in the map) travel
-  // furthest, the suit less, the studio backdrop (near-black in the map)
-  // barely moves. Photo and depth are sampled through the SAME cover-fit
-  // UV transform, so the two never drift out of register. Displacement is
-  // capped at ~54px across / ~38px down for the very closest pixels, and
-  // it rides on top of a plain CSS-transform movement of the photo (see
-  // the "WHY IT STILL DOESN'T MOVE" note below), so the hero moves on
-  // every device whether or not WebGL works there.
+  // ITS DEPTH: every pixel shares a base shift (~30px across / ~21px
+  // down at desktop size), and near pixels get up to ~36px / ~25px MORE — the
+  // head and pointing hand (brightest in the map) travel furthest, the
+  // suit less, the studio backdrop (near-black in the map) least. Base
+  // shift and depth warp are ONE sampling operation inside this shader
+  // (see the SINGLE-SURFACE RULE in the CSS and the iteration note in
+  // the fragment source): there is no CSS transform on the photo or the
+  // canvas while this runs, so Ian and the space around him are painted
+  // in the same GPU pass and move in perfect time on every device. If
+  // WebGL is unavailable the plain <img> moves alone by CSS instead —
+  // still exactly one moving surface.
   // Runs for EVERY input — desktop mouse, a real mouse on Samsung DeX
   // (where Android Chrome misleadingly reports hover:none / pointer:
   // coarse, which is why this is NOT gated on those media queries or on
   // 'ontouchstart'), and touchscreens, where a finger touching or
   // dragging on the hero photo drives the exact same eased vector.
   // DEVICE FAIL-SAFES (the black-shadow bug): the canvas context is created
-  // with alpha:true and the <img> underneath is NEVER hidden, so a lost or
-  // black canvas composites as transparent over the real photo. On top of
+  // with alpha:true, and the <img> is hidden ONLY after the canvas has
+  // drawn a frame that is read back and verified non-black — a lost or
+  // dead canvas therefore never gets to hide the real photo. On top of
   // that: a webglcontextlost listener drops the canvas the moment the GPU
-  // gives it up, texture-upload errors abort before the canvas is shown,
-  // and the first drawn frame is read back — if every sampled pixel is
-  // black (incomplete-texture black on this device's GPU), the canvas is
-  // dropped and the photo underneath carries the hero on its own.
+  // gives it up (restoring the <img> as the moving surface), and texture-
+  // upload errors abort before the canvas is ever shown.
   // WHY IT "STILL DOESN'T MOVE" — fixed in this pass. The old build made
   // ALL movement depend on this WebGL script succeeding end-to-end, and
   // the script bailed out completely in three common situations:
@@ -1635,16 +1648,16 @@
   //      existed at all.
   // And even when it did run, the cap was ~15px at the extreme edge of
   // the frame only, eased at 0.065 — easy to miss entirely.
-  // This pass restructures it: pointer/touch input and an eased CSS
-  // transform on the photo itself are the PRIMARY movement — plain DOM,
-  // no GPU, registered immediately, driven by unified Pointer Events
-  // (mouse, DeX mouse, pen and finger all report through them) plus the
-  // old mouse/touch events as belt-and-braces. The WebGL depth warp
-  // still runs on top when the device supports it, with a bigger cap.
-  // Reduced-motion no longer kills direct manipulation (a photo leaning
-  // toward the visitor's own finger/cursor is their action, and the
-  // owner explicitly wants it in every mode); it only stops the idle
-  // auto-sway. If WebGL dies at any point the CSS movement carries on.
+  // This pass restructures it: pointer/touch input is registered
+  // immediately, driven by unified Pointer Events (mouse, DeX mouse,
+  // pen and finger all report through them) plus the old mouse/touch
+  // events as belt-and-braces, and one eased vector drives whichever
+  // single surface is live (canvas shader, or the <img> by CSS when
+  // WebGL is unavailable). Reduced-motion no longer kills direct
+  // manipulation (a photo leaning toward the visitor's own finger/
+  // cursor is their action, and the owner explicitly wants it in every
+  // mode); it only stops the idle auto-sway. If WebGL dies at any
+  // point the CSS fallback carries on.
   var REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var scopeEl = document.getElementById('heroScope');
   var canvas = document.getElementById('heroDepth');
@@ -1652,22 +1665,35 @@
   var fig = canvas.parentNode;
   var photoEl = scopeEl.querySelector('.hero-photo');
 
-  /* ---------- primary movement: eased CSS transform (no WebGL) ----------
-     The photo and the depth canvas get the SAME translate so they stay
-     in register; the figure itself tilts in 3D. Overscaled (1.16) so
-     the translate never opens a gap at the edges. An idle sway takes
-     over a few seconds after the last input so the hero visibly moves
-     on its own in the preview — no input required to prove it lives. */
+  /* ---------- movement: ONE eased vector, ONE moving surface ----------
+     A single eased vector (cX, cY) drives everything, and exactly one
+     surface ever moves with it:
+       • WebGL live  → the depth canvas, and the motion is applied
+         INSIDE its shader (base shift + depth warp in one pass). The
+         canvas element itself gets NO CSS transform and the <img> is
+         hidden, so there is no second copy on a different presentation
+         clock to lag a frame behind and trace his outline.
+       • WebGL dead/absent → the plain <img>, CSS-transformed, with the
+         canvas hidden. Again one layer, one clock.
+     The figure tilt is a transform on the SHARED parent: it moves the
+     photo, the reticle and the HUD as one rigid frame and can never
+     put them out of register with each other. An idle sway takes over
+     a few seconds after the last input so the hero visibly moves on
+     its own — no input required to prove it lives. */
   var tX = 0, tY = 0;        // target, -1..1
   var cX = 0, cY = 0;        // eased current
   var lastInput = 0;         // timestamp of last pointer/touch input
   var raf = null;
   var EASE = 0.12;
   var glDraw = null;         // set by the WebGL section when it is live
+  var glLive = false;        // true once the canvas is the visible hero
   function applyCss(){
-    var tr = 'translate3d(' + (cX * 30).toFixed(2) + 'px,' + (cY * 21).toFixed(2) + 'px,0) scale(1.16)';
-    if (photoEl) photoEl.style.transform = tr;
-    canvas.style.transform = tr;
+    // fallback surface only: when the canvas is live the <img> is
+    // hidden and must NOT be transformed — a second moving copy under
+    // (or over) the canvas is exactly the desync being fixed.
+    if (!glLive && photoEl){
+      photoEl.style.transform = 'translate3d(' + (cX * 30).toFixed(2) + 'px,' + (cY * 21).toFixed(2) + 'px,0) scale(1.16)';
+    }
     fig.style.transform = 'rotateX(' + (-cY * 9.5).toFixed(3) + 'deg) rotateY(' + (cX * 13).toFixed(3) + 'deg)';
   }
   function frame(now){
@@ -1742,7 +1768,9 @@
   canvas.addEventListener('webglcontextlost', function(){
     dead = true;
     glDraw = null;
+    glLive = false;   // <img> becomes the single moving surface again
     fig.classList.remove('depth-on');
+    wake();
   }, false);
 
   var VSRC = 'attribute vec2 aPos; varying vec2 vUv; void main(){ vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }';
@@ -1751,33 +1779,56 @@
     'varying vec2 vUv;',
     'uniform sampler2D uPhoto;',
     'uniform sampler2D uDepth;',
-    'uniform vec2 uCover;',  // visible fraction of the photo under cover-fit (x, y)
+    'uniform vec2 uCover;',  // visible fraction of the photo under cover-fit (x, y), incl. the zoom headroom
     'uniform vec2 uMouse;',  // eased pointer, -1..1 (x right, y DOWN — screen space)
-    'uniform vec2 uMax;',    // displacement cap in photo-UV units (x, y)
+    'uniform vec2 uBase;',   // whole-photo shift in photo-UV units — the move EVERY pixel shares
+    'uniform vec2 uMax;',    // EXTRA shift in photo-UV units for the closest pixels (depth on top of uBase)
+    // Feathered, remapped depth at a photo-UV point. WHY THE MAP IS
+    // PRE-BLURRED (the actual cut-out mechanism, found by rendering the
+    // old warp offline): the raw MiDaS map steps from backdrop to Ian
+    // over ~2 texels, so the old warp's displacement changed by its
+    // full amount across ~2 output pixels — faster than the pixels
+    // themselves advance. The sampling mapping FOLDED (its Jacobian
+    // went negative across ~2,500 pixels around his head and hand):
+    // a band of the photo was sampled in reverse, smeared and
+    // duplicated — the slab of forehead/hand visibly torn from the
+    // face at strong deflection, i.e. his cut-out separating from the
+    // space around him exactly as reported. assets/ian1-depth.png is
+    // therefore gaussian-blurred (radius 38) before it ships, widening
+    // the silhouette ramp to ~90 texels, and the in-shader five-tap
+    // average below widens it a touch more; the remap then pins the
+    // backdrop (~0.0-0.14 in the map) at 0 and his silhouette at 1
+    // with a smoothstep between. With these caps the mapping's
+    // Jacobian stays positive at every pixel, every figure size and
+    // every deflection — verified numerically offline; it cannot fold.
+    'float depthAt(vec2 p){',
+    '  vec2 tx = vec2(0.004, 0.0055);',
+    '  float d = texture2D(uDepth, p).r * 0.4',
+    '          + texture2D(uDepth, p + vec2( tx.x, 0.0)).r * 0.15',
+    '          + texture2D(uDepth, p - vec2( tx.x, 0.0)).r * 0.15',
+    '          + texture2D(uDepth, p + vec2(0.0,  tx.y)).r * 0.15',
+    '          + texture2D(uDepth, p - vec2(0.0,  tx.y)).r * 0.15;',
+    '  float dn = clamp((d - 0.14) / 0.79, 0.0, 1.0);',
+    '  return dn * dn * (3.0 - 2.0 * dn);',
+    '}',
     'void main(){',
     '  vec2 uv = (vUv - 0.5) * uCover + 0.5;',
-    // FEATHERED depth (the cut-out line fix): the raw MiDaS map steps from
-    // backdrop to Ian in a single texel, so the warp used to jump the full
-    // displacement across one pixel column — tearing a bright smeared
-    // outline along his silhouette that showed the moment he moved.
-    // Averaging five taps spread ~2 texels softens that step into a ramp:
-    // displacement now eases across several pixels at his edge instead of
-    // snapping, and no single hard line is left to see.
-    '  vec2 tx = vec2(0.0016, 0.0023);',
-    '  float d = texture2D(uDepth, uv).r * 0.4',
-    '          + texture2D(uDepth, uv + vec2( tx.x, 0.0)).r * 0.15',
-    '          + texture2D(uDepth, uv - vec2( tx.x, 0.0)).r * 0.15',
-    '          + texture2D(uDepth, uv + vec2(0.0,  tx.y)).r * 0.15',
-    '          + texture2D(uDepth, uv - vec2(0.0,  tx.y)).r * 0.15;',
-    // depth floor: backdrop sits at ~0.0-0.14 in the map, Ian at ~0.82-0.93 —
-    // remap so the backdrop is pinned at 0 and his silhouette reaches 1,
-    // with a smoothstep so mid-depths (suit, haze) ease between the two.
-    // The remap range is widened (0.14/0.79 vs the old 0.18/0.75) for the
-    // same reason: a gentler ramp at the silhouette, a less visible edge.
-    '  float dn = clamp((d - 0.14) / 0.79, 0.0, 1.0);',
-    '  dn = dn * dn * (3.0 - 2.0 * dn);',
-    // sample AGAINST the shift so near content moves WITH the cursor
-    '  vec2 suv = vec2(uv.x - uMouse.x * uMax.x * dn, uv.y + uMouse.y * uMax.y * dn);',
+    // ONE SAMPLE, ONE PASS: depth is read once, at uv, and the total
+    // offset — base shift (every pixel) + depth extra (near pixels) —
+    // is applied to that same lookup. Ian and the space around him are
+    // therefore never separate layers that could present on different
+    // frames: there is only this texture, redrawn whole each frame.
+    // (An earlier draft iterated — re-reading depth at the displaced
+    // point so the matte would chase the content — but at the hard
+    // depth step of his silhouette the iteration oscillates between
+    // foreground and background depth and tears his head and hand
+    // into fragments. The single feathered sample keeps the edge
+    // coherent; the frame-lock comes from the single surface, not
+    // from chasing the matte.)
+    // Offset applied against the shift so content moves WITH the
+    // cursor: x samples backwards, y forwards (UNPACK_FLIP_Y space).
+    '  float dn = depthAt(uv);',
+    '  vec2 suv = uv + vec2(-uMouse.x * (uBase.x + uMax.x * dn), uMouse.y * (uBase.y + uMax.y * dn));',
     '  gl_FragColor = texture2D(uPhoto, suv);',
     '}'
   ].join('\n');
@@ -1808,6 +1859,7 @@
 
   var uCoverL = gl.getUniformLocation(prog, 'uCover');
   var uMouseL = gl.getUniformLocation(prog, 'uMouse');
+  var uBaseL  = gl.getUniformLocation(prog, 'uBase');
   var uMaxL   = gl.getUniformLocation(prog, 'uMax');
   gl.uniform1i(gl.getUniformLocation(prog, 'uPhoto'), 0);
   gl.uniform1i(gl.getUniformLocation(prog, 'uDepth'), 1);
@@ -1825,8 +1877,13 @@
     return t;
   }
 
-  // cover-fit + displacement caps, recomputed on resize
-  var coverX = 1, coverY = 1, maxX = 0.042, maxY = 0.03;
+  // cover-fit + displacement caps, recomputed on resize. The canvas is
+  // never CSS-scaled (single-surface rule), so the overscan the old CSS
+  // transform provided is folded into the cover fit instead: sampling
+  // only the middle 1/1.22 of the cover region zooms the photo in and
+  // leaves headroom on every side for the base shift + depth shift to
+  // sample into without ever reaching the photo's clamped edge.
+  var coverX = 1, coverY = 1, baseX = 0.02, baseY = 0.014, maxX = 0.042, maxY = 0.03;
   function resize(){
     var w = fig.clientWidth, h = fig.clientHeight;
     if (!w || !h) return;
@@ -1837,19 +1894,31 @@
     var imgA = 1280 / 853, boxA = w / h;
     if (boxA < imgA){ coverX = boxA / imgA; coverY = 1; }
     else { coverX = 1; coverY = imgA / boxA; }
-    maxX = 54 / (w / coverX);   // 54 css px at full deflection, closest pixels
-    maxY = 38 / (h / coverY);   // 38 css px — bold lean, unmissable at a glance
+    coverX /= 1.22; coverY /= 1.22;   // zoom headroom (see note above)
+    // Displacement caps are FIXED fractions of the photo (UV units),
+    // NOT pixel counts: a fixed 40px cap is a far bigger relative
+    // shift on a 358px phone frame than on a 520px desktop frame, and
+    // relative shift is what tears the silhouette (see the fold note
+    // at the depth map). In UV the warp behaves identically at every
+    // figure size. Values ≈ the old pixel caps at desktop size:
+    // base ≈ 30/21px, depth extra ≈ 36/25px at 520×442.
+    baseX = 0.037; baseY = 0.039;
+    maxX = 0.044;  maxY = 0.046;
     if (glDraw) glDraw(cX, cY);
   }
 
-  // The primary CSS loop (above) drives this on every frame with the
-  // same eased vector, so the per-pixel warp and the photo translate
-  // move as one. If the GPU drops the context, glDraw is nulled and
-  // the CSS movement simply carries on without it.
+  // The frame loop (above) drives this on every frame with the same
+  // eased vector it uses for the figure tilt. This draw is the ONLY
+  // place the hero photo moves while WebGL is live: base shift and
+  // depth warp are one sampling operation in one GPU pass, so no two
+  // layers exist that could present on different frames. If the GPU
+  // drops the context, glDraw is nulled, glLive clears, and the CSS
+  // fallback takes over the <img> as the single moving surface.
   glDraw = function(x, y){
     if (dead) return;
     gl.uniform2f(uCoverL, coverX, coverY);
     gl.uniform2f(uMouseL, x, y);
+    gl.uniform2f(uBaseL, baseX, baseY);
     gl.uniform2f(uMaxL, maxX, maxY);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   };
@@ -1877,6 +1946,7 @@
       if (!lit){
         dead = true;
         glDraw = null;
+        glLive = false;
         fig.classList.remove('depth-on');
       }
     } catch(e){ /* readback unavailable on this driver — leave as drawn */ }
@@ -1890,10 +1960,15 @@
     makeTex(photoImg, 0);
     makeTex(depthImg, 1);
     if (gl.getError() !== gl.NO_ERROR){ failed = true; glDraw = null; return; }
-    fig.classList.add('depth-on');
+    // Draw and probe BEFORE depth-on: that class now hides the <img>,
+    // so the canvas must already hold a verified-good frame at the
+    // moment it becomes the only visible copy — no blank gap, and a
+    // dead texture never gets to hide the real photo.
     resize();
     probeFirstFrame();
     if (dead) return;
+    glLive = true;
+    fig.classList.add('depth-on');
     window.addEventListener('resize', resize);
     wake();
   }

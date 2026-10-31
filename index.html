@@ -260,6 +260,16 @@
   .btn-red{background:var(--red); color:#fff; box-shadow:0 8px 24px rgba(220,20,60,.45)}
   .btn-red:hover{background:#f21b4d}
   .btn-wa{background:var(--wa); color:#062b16; box-shadow:0 8px 24px rgba(37,211,102,.25)}
+  /* primary tip-line CTA: a soft red glow that breathes on a slow loop —
+     urgent, not blinding. The button's own green fill and dark text are
+     untouched (only the halo animates), so the label stays perfectly
+     legible at every phase; the base green shadow is carried through
+     both keyframes so nothing jumps. */
+  .btn-pulse{animation:tipPulse 2.8s ease-in-out infinite}
+  @keyframes tipPulse{
+    0%,100%{box-shadow:0 8px 24px rgba(37,211,102,.25), 0 0 16px 2px rgba(220,20,60,.22), 0 0 0 0 rgba(220,20,60,.14)}
+    50%{box-shadow:0 8px 24px rgba(37,211,102,.25), 0 0 34px 9px rgba(220,20,60,.48), 0 0 0 7px rgba(220,20,60,.10)}
+  }
   .btn-ghost{background:linear-gradient(135deg, rgba(255,255,255,.08), rgba(220,20,60,.07)); color:#ffffff; border-color:rgba(255,150,170,.38); backdrop-filter:blur(7px) saturate(145%); -webkit-backdrop-filter:blur(7px) saturate(145%); box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 8px 22px rgba(0,0,0,.35)}
   .btn-ghost:hover{background:linear-gradient(135deg, rgba(255,255,255,.20), rgba(220,20,60,.28)); border-color:rgba(255,150,170,.60)}
   .big-panel .btn-ghost,.about .btn-ghost{background:linear-gradient(135deg, rgba(255,255,255,.10), rgba(255,255,255,.04)); color:#fff; border-color:rgba(255,190,205,.40); box-shadow:inset 0 1px 0 rgba(255,255,255,.26)}
@@ -267,7 +277,7 @@
   .btn-sm{padding:9px 16px; font-size:14px}
   .dot{width:8px; height:8px; border-radius:50%; background:#ff2a4d; flex:none; box-shadow:0 0 0 0 rgba(255,42,77,.6); animation:pulse 1.8s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,42,77,.55)}70%{box-shadow:0 0 0 9px rgba(255,42,77,0)}100%{box-shadow:0 0 0 0 rgba(255,42,77,0)}}
-  @media (prefers-reduced-motion: reduce){ .dot{animation:none} html{scroll-behavior:auto} }
+  @media (prefers-reduced-motion: reduce){ .dot{animation:none} html{scroll-behavior:auto} .btn-pulse{animation:none; box-shadow:0 8px 24px rgba(37,211,102,.25), 0 0 22px 4px rgba(220,20,60,.32)} }
 
   /* ---------- hero ---------- */
   .hero{padding:44px 0 30px}
@@ -330,15 +340,29 @@
   .scope canvas.hero-depth{position:absolute; inset:0; width:100%; height:100%; z-index:2; display:none}
   .scope figure.depth-on canvas.hero-depth{display:block}
   .scope figure.depth-on img.hero-photo{visibility:hidden}
-  /* the hero scope + reticle overlay the WHOLE frame, Ian included — a real
-     viewfinder's reticle sits over the subject ("TARGET LOCKED"). They used
-     to be hidden across his silhouette by an Ian-shaped alpha mask
-     (ian1-scope-mask.png), but the mask is pinned to his RESTING outline
-     while the photo translates and depth-warps underneath it, so the moment
-     he moved, his original cut-out line stayed printed on the background
-     and the scope lines stopped/started along a silhouette that was no
-     longer where he was — the "weird outline while he moves". No mask: the
-     faint reticle simply crosses the whole frame and can never trace him. */
+  /* the hero scope + reticle are layered BEHIND Ian — Ian's own design
+     intent: backdrop → reticle → scope SVG → HUD → Ian, never scope
+     lines over his face. How that is honoured depends on the surface:
+       • WebGL live: the scope artwork (reticle + SVG rings/crosshair/
+         readouts) is rasterised ONCE to a texture and composited INSIDE
+         the hero fragment shader in screen space, with its alpha
+         multiplied by (1 − ianMask), ianMask being the feathered depth
+         sampled at the WARPED uv — "is this pixel currently showing
+         Ian". The occlusion therefore derives from the very depth
+         texture being warped, tracks him with zero desync by
+         construction, and its blurred edge keeps the cut soft: no hard
+         mask line, no ghost silhouette. The DOM .hero-scope-svg and
+         .reticle are then hidden (figure.scope-in-shader) — they are
+         the texture's source, not a second overlay.
+       • No WebGL (fallback): the plain <img> plus the DOM reticle/SVG
+         overlay, exactly as before — there is no warp to desync from.
+     NO DOM MASK, ever: the retired Ian-shaped alpha mask
+     (ian1-scope-mask.png) was pinned to his RESTING outline while the
+     photo moved underneath it, printing his original cut-out line on
+     the background — the "weird outline while he moves". The shader
+     occlusion above replaces it; do not reintroduce a mask element. */
+  .scope figure.depth-on.scope-in-shader .hero-scope-svg,
+  .scope figure.depth-on.scope-in-shader .reticle{visibility:hidden}
   .scope img{width:100%; height:112%; object-fit:cover; aspect-ratio:4/3.4; will-change:transform; transform:scale(1.06)}
   .scope .hud{
     position:absolute; z-index:4; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.14em;
@@ -989,7 +1013,7 @@
           <li>Community issues: bad roads, no water, neglect — reported on air</li>
         </ul>
         <div class="hero-ctas" style="margin-top:0">
-          <a class="btn btn-wa" href="https://wa.me/18682944081" target="_blank" rel="noopener">WhatsApp (868) 294-4081</a>
+          <a class="btn btn-wa btn-pulse" href="https://wa.me/18682944081" target="_blank" rel="noopener">WhatsApp (868) 294-4081</a>
           <a class="btn btn-ghost" href="https://ianalleyne.org" target="_blank" rel="noopener">Anonymous Report at IanAlleyne.org</a>
         </div>
       </div>
@@ -1769,7 +1793,10 @@
     dead = true;
     glDraw = null;
     glLive = false;   // <img> becomes the single moving surface again
+    // scope-in-shader drops with depth-on: the DOM reticle/SVG overlay
+    // returns for the fallback surface, exactly as in the no-WebGL path
     fig.classList.remove('depth-on');
+    fig.classList.remove('scope-in-shader');
     wake();
   }, false);
 
@@ -1779,6 +1806,8 @@
     'varying vec2 vUv;',
     'uniform sampler2D uPhoto;',
     'uniform sampler2D uDepth;',
+    'uniform sampler2D uScope;',  // reticle + scope-SVG artwork, rasterised once to a texture (screen space)
+    'uniform float uScopeOn;',    // 1 once that texture is live; 0 keeps the shader scope out entirely
     'uniform vec2 uCover;',  // visible fraction of the photo under cover-fit (x, y), incl. the zoom headroom
     'uniform vec2 uMouse;',  // eased pointer, -1..1 (x right, y DOWN — screen space)
     'uniform vec2 uBase;',   // whole-photo shift in photo-UV units — the move EVERY pixel shares
@@ -1829,7 +1858,25 @@
     // cursor: x samples backwards, y forwards (UNPACK_FLIP_Y space).
     '  float dn = depthAt(uv);',
     '  vec2 suv = uv + vec2(-uMouse.x * (uBase.x + uMax.x * dn), uMouse.y * (uBase.y + uMax.y * dn));',
-    '  gl_FragColor = texture2D(uPhoto, suv);',
+    '  vec3 col = texture2D(uPhoto, suv).rgb;',
+    // SCOPE BEHIND IAN: the reticle + scope rings are composited AFTER
+    // the photo (so they print on the backdrop) but their alpha is
+    // multiplied by (1 − ianMask), where ianMask is the feathered depth
+    // read at the WARPED uv (suv) — i.e. whether THIS output pixel is
+    // currently showing Ian. Where he stands the scope contributes
+    // nothing; on the backdrop it shows at full strength; across his
+    // silhouette the pre-blurred depth ramp feathers the transition,
+    // so there is no hard cut-out line and — because the mask is the
+    // same texture, in the same pass, at the same warped coordinate —
+    // no frame in which the occlusion can lag behind him and trace a
+    // ghost outline. The scope itself is sampled at vUv (SCREEN
+    // space): a real viewfinder does not warp with the photo.
+    '  if (uScopeOn > 0.5){',
+    '    float ianMask = depthAt(suv);',
+    '    vec4 scopeTex = texture2D(uScope, vUv);',
+    '    col = mix(col, scopeTex.rgb, scopeTex.a * (1.0 - ianMask));',
+    '  }',
+    '  gl_FragColor = vec4(col, 1.0);',
     '}'
   ].join('\n');
 
@@ -1861,10 +1908,14 @@
   var uMouseL = gl.getUniformLocation(prog, 'uMouse');
   var uBaseL  = gl.getUniformLocation(prog, 'uBase');
   var uMaxL   = gl.getUniformLocation(prog, 'uMax');
+  var uScopeOnL = gl.getUniformLocation(prog, 'uScopeOn');
   gl.uniform1i(gl.getUniformLocation(prog, 'uPhoto'), 0);
   gl.uniform1i(gl.getUniformLocation(prog, 'uDepth'), 1);
+  gl.uniform1i(gl.getUniformLocation(prog, 'uScope'), 2);
+  gl.uniform1f(uScopeOnL, 0);
+  var scopeTexReady = false;   // true once the rasterised scope texture is bound on unit 2
 
-  function makeTex(img, unit){
+  function makeTex(img, unit, format){
     var t = gl.createTexture();
     gl.activeTexture(gl.TEXTURE0 + unit);
     gl.bindTexture(gl.TEXTURE_2D, t);
@@ -1873,7 +1924,13 @@
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+    // format defaults to RGB (photo + depth carry no alpha). The scope
+    // texture MUST be uploaded as RGBA: as RGB its alpha is discarded,
+    // every transparent pixel of the artwork becomes opaque BLACK
+    // (painting the backdrop black) and the strokes lose their baked
+    // .26 alpha and print at full strength over everything.
+    var fmt = format || gl.RGB;
+    gl.texImage2D(gl.TEXTURE_2D, 0, fmt, fmt, gl.UNSIGNED_BYTE, img);
     return t;
   }
 
@@ -1920,6 +1977,7 @@
     gl.uniform2f(uMouseL, x, y);
     gl.uniform2f(uBaseL, baseX, baseY);
     gl.uniform2f(uMaxL, maxX, maxY);
+    gl.uniform1f(uScopeOnL, scopeTexReady ? 1 : 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   };
 
@@ -1948,15 +2006,98 @@
         glDraw = null;
         glLive = false;
         fig.classList.remove('depth-on');
+        fig.classList.remove('scope-in-shader');
       }
     } catch(e){ /* readback unavailable on this driver — leave as drawn */ }
+  }
+
+  /* ---------- scope texture: the viewfinder, rasterised once ----------
+     The DOM scope artwork is drawn ONCE into an offscreen canvas at
+     2× its viewBox (800×680 — the figure's exact 400:340 aspect, so
+     sampling it at vUv never distorts it):
+       1. the .reticle layer first (crosshair lines, ring, dashed inner
+          ring, centre dot), drawn at its CSS opacity .38;
+       2. the .hero-scope-svg artwork over it (all rings, crosshair,
+          stadia, mil dots, rim ticks, centre target and readouts),
+          drawn at its CSS opacity .26, keeping the overall subtle feel.
+     That canvas is bound as texture unit 2 and composited by the
+     shader BEHIND Ian (see the FSRC note). Nothing here is an Ian-
+     shaped mask element — the occlusion lives entirely in the shader,
+     derived from the depth texture itself. If rasterising fails for
+     any reason the hero still goes live, just without the in-shader
+     scope: the DOM overlay is only hidden once the texture is bound,
+     so a failure leaves the established fallback look untouched. */
+  function buildScopeTexture(done){
+    var svgEl = scopeEl.querySelector('.hero-scope-svg');
+    if (!svgEl || !window.XMLSerializer){ done(false); return; }
+    try {
+      var TW = 800, TH = 680;
+      var cvs = document.createElement('canvas');
+      cvs.width = TW; cvs.height = TH;
+      var ctx = cvs.getContext('2d');
+      if (!ctx){ done(false); return; }
+      // 1 — reticle, beneath the SVG (the design's z-order)
+      ctx.save();
+      ctx.globalAlpha = 0.38;
+      ctx.fillStyle = 'rgba(255,90,125,.55)';
+      ctx.fillRect(TW / 2 - 1, TH * 0.06, 2, TH * 0.88);          // vertical line
+      ctx.fillRect(TW * 0.06, TH / 2 - 1, TW * 0.88, 2);          // horizontal line
+      ctx.beginPath();                                           // outer ring (46% of width)
+      ctx.arc(TW / 2, TH / 2, TW * 0.23, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,110,140,.55)'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.beginPath();                                           // dashed inner ring (inset 12%)
+      ctx.arc(TW / 2, TH / 2, TW * 0.23 * 0.76, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,160,180,.45)'; ctx.lineWidth = 2;
+      ctx.setLineDash([7, 7]); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();                                           // centre dot
+      ctx.arc(TW / 2, TH / 2, 5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,77,109,.55)'; ctx.fill();
+      ctx.restore();
+      // 2 — the scope SVG artwork itself
+      var clone = svgEl.cloneNode(true);
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      clone.setAttribute('width', TW);
+      clone.setAttribute('height', TH);
+      clone.removeAttribute('class');
+      clone.removeAttribute('aria-hidden');
+      var svgText = new XMLSerializer().serializeToString(clone);
+      var svgUrl = URL.createObjectURL(new Blob([svgText], {type:'image/svg+xml;charset=utf-8'}));
+      var svgImg = new Image();
+      var finished = false;
+      function finish(ok){
+        if (finished) return;
+        finished = true;
+        try { URL.revokeObjectURL(svgUrl); } catch(e){}
+        if (!ok || dead){ done(false); return; }
+        try {
+          ctx.save();
+          ctx.globalAlpha = 0.26;
+          ctx.drawImage(svgImg, 0, 0, TW, TH);
+          ctx.restore();
+          makeTex(cvs, 2, gl.RGBA);   // alpha is the whole point — see makeTex
+          if (gl.getError() !== gl.NO_ERROR){ done(false); return; }
+          scopeTexReady = true;
+          done(true);
+        } catch(e){ done(false); }
+      }
+      svgImg.onload = function(){ finish(true); };
+      svgImg.onerror = function(){ finish(false); };
+      svgImg.src = svgUrl;
+    } catch(e){ done(false); }
   }
 
   var photoImg = new Image(), depthImg = new Image();
   var loaded = 0, failed = false;
   function oneReady(){
     if (failed || dead) return;
-    if (++loaded !== 2) return;
+    // photo, depth AND the scope raster must all settle before the
+    // canvas becomes the visible hero, so the first live frame already
+    // carries the scope behind Ian — no frame where the scope pops in
+    // or, worse, sits over him. A failed scope raster still settles
+    // (scopeTexReady stays false): the hero goes live without the
+    // in-shader scope and the DOM overlay stays as the fallback.
+    if (++loaded !== 3) return;
     makeTex(photoImg, 0);
     makeTex(depthImg, 1);
     if (gl.getError() !== gl.NO_ERROR){ failed = true; glDraw = null; return; }
@@ -1969,6 +2110,7 @@
     if (dead) return;
     glLive = true;
     fig.classList.add('depth-on');
+    if (scopeTexReady) fig.classList.add('scope-in-shader');
     window.addEventListener('resize', resize);
     wake();
   }
@@ -1977,6 +2119,7 @@
   depthImg.onload = oneReady;
   photoImg.onerror = oneFail;
   depthImg.onerror = oneFail;
+  buildScopeTexture(function(){ oneReady(); });
 
   // No input gating at all: the textures load immediately and the effect
   // answers mouse, pen, DeX mouse and touch drags alike (see the note at

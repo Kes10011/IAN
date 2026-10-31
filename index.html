@@ -319,15 +319,15 @@
   .scope img.hero-photo{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; aspect-ratio:auto; z-index:1; transform:none; will-change:transform}
   .scope canvas.hero-depth{position:absolute; inset:0; width:100%; height:100%; z-index:2; display:none; will-change:transform}
   .scope figure.depth-on canvas.hero-depth{display:block}
-  /* the hero scope + reticle read as BEHIND Ian: an alpha mask derived from
-     the same depth map (cover-fitted exactly like the photo) hides the
-     overlay across his silhouette and shows it only in the background */
-  .reticle,.hero-scope-svg{
-    -webkit-mask-image:url("assets/ian1-scope-mask.png"); mask-image:url("assets/ian1-scope-mask.png");
-    -webkit-mask-size:cover; mask-size:cover;
-    -webkit-mask-position:center; mask-position:center;
-    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
-  }
+  /* the hero scope + reticle overlay the WHOLE frame, Ian included — a real
+     viewfinder's reticle sits over the subject ("TARGET LOCKED"). They used
+     to be hidden across his silhouette by an Ian-shaped alpha mask
+     (ian1-scope-mask.png), but the mask is pinned to his RESTING outline
+     while the photo translates and depth-warps underneath it, so the moment
+     he moved, his original cut-out line stayed printed on the background
+     and the scope lines stopped/started along a silhouette that was no
+     longer where he was — the "weird outline while he moves". No mask: the
+     faint reticle simply crosses the whole frame and can never trace him. */
   .scope img{width:100%; height:112%; object-fit:cover; aspect-ratio:4/3.4; will-change:transform; transform:scale(1.06)}
   .scope .hud{
     position:absolute; z-index:4; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.14em;
@@ -1066,7 +1066,7 @@
         <span class="chip">SIGN-UP <b>None Needed</b></span>
       </div>
       <div class="course-start">
-        <a class="btn btn-red course-start-btn" href="#/course">Start the Free Course →</a>
+        <a class="btn btn-red course-start-btn" href="#/course">Start Free Training →</a>
         <span class="course-start-note">Opens the full course — watch on any phone or computer.</span>
       </div>
     </div>
@@ -1756,11 +1756,25 @@
     'uniform vec2 uMax;',    // displacement cap in photo-UV units (x, y)
     'void main(){',
     '  vec2 uv = (vUv - 0.5) * uCover + 0.5;',
-    '  float d = texture2D(uDepth, uv).r;',
+    // FEATHERED depth (the cut-out line fix): the raw MiDaS map steps from
+    // backdrop to Ian in a single texel, so the warp used to jump the full
+    // displacement across one pixel column — tearing a bright smeared
+    // outline along his silhouette that showed the moment he moved.
+    // Averaging five taps spread ~2 texels softens that step into a ramp:
+    // displacement now eases across several pixels at his edge instead of
+    // snapping, and no single hard line is left to see.
+    '  vec2 tx = vec2(0.0016, 0.0023);',
+    '  float d = texture2D(uDepth, uv).r * 0.4',
+    '          + texture2D(uDepth, uv + vec2( tx.x, 0.0)).r * 0.15',
+    '          + texture2D(uDepth, uv - vec2( tx.x, 0.0)).r * 0.15',
+    '          + texture2D(uDepth, uv + vec2(0.0,  tx.y)).r * 0.15',
+    '          + texture2D(uDepth, uv - vec2(0.0,  tx.y)).r * 0.15;',
     // depth floor: backdrop sits at ~0.0-0.14 in the map, Ian at ~0.82-0.93 —
     // remap so the backdrop is pinned at 0 and his silhouette reaches 1,
     // with a smoothstep so mid-depths (suit, haze) ease between the two.
-    '  float dn = clamp((d - 0.18) / 0.75, 0.0, 1.0);',
+    // The remap range is widened (0.14/0.79 vs the old 0.18/0.75) for the
+    // same reason: a gentler ramp at the silhouette, a less visible edge.
+    '  float dn = clamp((d - 0.14) / 0.79, 0.0, 1.0);',
     '  dn = dn * dn * (3.0 - 2.0 * dn);',
     // sample AGAINST the shift so near content moves WITH the cursor
     '  vec2 suv = vec2(uv.x - uMouse.x * uMax.x * dn, uv.y + uMouse.y * uMax.y * dn);',

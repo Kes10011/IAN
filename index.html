@@ -718,6 +718,19 @@
     font-family:"Barlow Condensed",sans-serif; text-transform:uppercase; font-weight:700;
     font-size:clamp(34px,5vw,48px); line-height:1; margin:8px 0 0; letter-spacing:.01em; color:#ffffff;
   }
+  /* — red pulsing glow for the course title: text stays pure white,
+     only the soft red halo around it breathes gently — */
+  .glow-title{
+    color:#ffffff;
+    animation:titleGlowPulse 2.8s ease-in-out infinite;
+  }
+  @keyframes titleGlowPulse{
+    0%,100%{text-shadow:0 0 10px rgba(220,20,60,.55), 0 0 26px rgba(220,20,60,.30), 0 0 44px rgba(220,20,60,.14), 0 1px 10px rgba(0,0,0,.60)}
+    50%{text-shadow:0 0 18px rgba(255,45,85,.92), 0 0 42px rgba(220,20,60,.58), 0 0 72px rgba(220,20,60,.28), 0 1px 10px rgba(0,0,0,.60)}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .glow-title{animation:none; text-shadow:0 0 14px rgba(220,20,60,.65), 0 0 34px rgba(220,20,60,.38), 0 1px 10px rgba(0,0,0,.60)}
+  }
   @media (max-width:640px){
     .course-outline{grid-template-columns:1fr}
     .course-start-btn{width:100%; justify-content:center}
@@ -1003,7 +1016,7 @@
     <div class="sec-head">
       <div>
         <span class="sec-tag">▸ Free Training · A Gift From I.A.N Network</span>
-        <h2>Personal Safety and Situational Awareness</h2>
+        <h2 class="glow-title">Personal Safety and Situational Awareness</h2>
       </div>
       <p><strong style="color:#fff">Learn to spot danger before it spots you.</strong> Free video training for the general public — practical lessons for everyday life in Trinidad &amp; Tobago.</p>
     </div>
@@ -1253,7 +1266,7 @@
     <div class="sec-head">
       <div>
         <span class="sec-tag">▸ Free for Everyone · No Login · No Paywall</span>
-        <h2>Personal Safety and Situational Awareness</h2>
+        <h2 class="glow-title">Personal Safety and Situational Awareness</h2>
       </div>
       <p><strong style="color:#fff">Learn to spot danger before it spots you.</strong> Free video training from Ian — narrated video lessons for everyday life in Trinidad &amp; Tobago. Press play and learn.</p>
     </div>

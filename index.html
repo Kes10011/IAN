@@ -103,39 +103,65 @@
   .px-tactical{top:0; left:0; right:0; height:100%}
   /* — radar display, centred on the page: its centre point sits at the
      visual centre of the viewport (the fixed stage fills the screen),
-     NOT aligned with the hero image. The pan animation below only
-     wanders a few vw/vh around that centre, so the display stays
-     centred while keeping its slow ambient drift.
-     SCROLL GATE: the radar is hidden on load and only APPEARS once
-     the visitor starts scrolling (the reveal script adds .radar-on to
-     <html> on first scroll; a page loaded already-scrolled gets it
-     immediately). There is NO fade — no opacity transition — so the
-     rings/sweep/waves/blips all appear instantly together. — */
+     NOT aligned with the hero image. The pan animation below roams
+     WIDE around that centre — a big, obvious floating drift the
+     visitor can see moving at a glance (see scopePan).
+     SCROLL GATE — TWO-WAY: the radar's visibility follows the scroll
+     position continuously (the controller script toggles .radar-on on
+     <html> on every scroll frame). At the TOP of the page it is FULLY
+     hidden — opacity 0 AND visibility:hidden, animations paused — so
+     nothing of it (rings, sweep, waves, blips, drop-shadow) can ever
+     paint over the hero image or hero text. Scroll down and it
+     appears; scroll back to the top — or tap the logo / Back-to-top /
+     anything else that returns to the top — and it disappears again.
+     There is NO fade — no opacity transition — so the rings/sweep/
+     waves/blips all appear and vanish instantly together. — */
   .scope-drift{
     position:absolute; top:50%; left:50%; width:min(520px,72vw); aspect-ratio:1;
     transform:translate(-50%,-50%);
-    opacity:0;
-    animation:scopePan 38s ease-in-out infinite alternate; will-change:transform;
+    opacity:0; visibility:hidden;
+    animation:scopePan 20s ease-in-out infinite alternate; will-change:transform;
   }
-  html.radar-on .scope-drift{opacity:.32}
-  .scope-drift svg{width:100%; height:100%; display:block; overflow:visible; opacity:.95; filter:drop-shadow(0 0 2px rgba(220,20,60,.18))}
+  html:not(.radar-on) .scope-drift,
+  html:not(.radar-on) .scope-drift svg,
+  html:not(.radar-on) .scope-drift svg *{animation-play-state:paused !important}
+  html.radar-on .scope-drift{opacity:.32; visibility:visible}
+  .scope-drift svg{width:100%; height:100%; display:block; overflow:visible; opacity:.95; filter:drop-shadow(0 0 2px rgba(220,20,60,.18)); animation:radarHue 18s linear infinite}
+  /* — COLOUR CYCLE (background radar only): the whole display —
+     rings, sweep, waves, blips, glow — hue-rotates as ONE unit on a
+     smooth, endless loop through the client's sequence: RED (the
+     base crimson artwork, 0deg) → GREEN (~132deg) → PURPLE
+     (~287deg) → YELLOW (~422deg = 62deg) → back to RED (360deg =
+     0deg, so the loop is seamless). hue-rotate passes through the
+     in-between hues on each leg, which IS the smooth transition.
+     The hero scope is a different element and stays red. — */
+  @keyframes radarHue{
+    0%{filter:drop-shadow(0 0 2px rgba(220,20,60,.18)) hue-rotate(0deg)}
+    25%{filter:drop-shadow(0 0 2px rgba(220,20,60,.18)) hue-rotate(132deg)}
+    50%{filter:drop-shadow(0 0 2px rgba(220,20,60,.18)) hue-rotate(287deg)}
+    75%{filter:drop-shadow(0 0 2px rgba(220,20,60,.18)) hue-rotate(422deg)}
+    100%{filter:drop-shadow(0 0 2px rgba(220,20,60,.18)) hue-rotate(360deg)}
+  }
   .scope-drift.small{
-    top:auto; bottom:-6%; left:-4%; width:min(300px,48vw); opacity:0;
-    animation:scopePan2 54s ease-in-out infinite alternate;
+    top:auto; bottom:-6%; left:-4%; width:min(300px,48vw); opacity:0; visibility:hidden;
+    animation:scopePan2 26s ease-in-out infinite alternate;
   }
-  html.radar-on .scope-drift.small{opacity:.22}
-  /* gentle float: the whole display drifts a few vw/vh around the
-     page centre and breathes scale by a hair — the ambient wander the
-     old scope had, kept subtle and centred */
+  html.radar-on .scope-drift.small{opacity:.22; visibility:visible}
+  /* BIG float — decisive, on purpose (the client asked for movement he
+     can SEE, not a whisper): the whole main display roams ±11vw
+     sideways and ±8vh up/down around the page centre on a 20s loop
+     and breathes scale 0.96–1.10, so its travel is obvious within a
+     second or two of looking at the page. The small secondary display
+     roams a comparably wide path on its own 26s loop. */
   @keyframes scopePan{
-    0%{transform:translate3d(calc(-50% - 3.5vw), calc(-50% - 2vh), 0) scale(1)}
-    35%{transform:translate3d(calc(-50% + 2vw), calc(-50% + 2.5vh), 0) scale(1.04)}
-    68%{transform:translate3d(calc(-50% + 3.5vw), calc(-50% - 2.5vh), 0) scale(.98)}
-    100%{transform:translate3d(calc(-50% - 2vw), calc(-50% + 2vh), 0) scale(1.02)}
+    0%{transform:translate3d(calc(-50% - 11vw), calc(-50% - 7vh), 0) scale(1)}
+    35%{transform:translate3d(calc(-50% + 7vw), calc(-50% + 8vh), 0) scale(1.10)}
+    68%{transform:translate3d(calc(-50% + 11vw), calc(-50% - 8vh), 0) scale(.96)}
+    100%{transform:translate3d(calc(-50% - 7vw), calc(-50% + 6vh), 0) scale(1.06)}
   }
   @keyframes scopePan2{
-    0%{transform:translate3d(2vw,0,0) scale(1)}
-    100%{transform:translate3d(10vw,-7vh,0) scale(1.06)}
+    0%{transform:translate3d(-2vw,3vh,0) scale(1)}
+    100%{transform:translate3d(16vw,-13vh,0) scale(1.10)}
   }
   /* — laser sight: thin line + glowing dot, slowly sweeping — */
   .laser-wrap{
@@ -191,7 +217,7 @@
   }
   @media (prefers-reduced-motion: reduce){
     .px-layer{transform:none !important}
-    .scope-drift,.laser-wrap,.laser-dot{animation:none !important}
+    .scope-drift,.scope-drift svg,.laser-wrap,.laser-dot{animation:none !important}
     .scope-drift{transition:none}
   }
   .wrap{position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:0 20px}
@@ -607,47 +633,6 @@
   .course-intro p{color:var(--muted); line-height:1.65; margin:0 0 12px; font-size:16.5px; max-width:52em}
   .course-intro p strong{color:#fff}
   .course-intro p:last-of-type{margin-bottom:0}
-  /* vocal course intro — compact player at the top of the course page */
-  .course-voice-intro{
-    display:flex; align-items:center; gap:14px;
-    border-radius:18px; padding:13px 16px; margin-bottom:18px;
-    border:1px solid rgba(255,130,155,.40); color:var(--ink);
-    background:linear-gradient(155deg, rgba(220,20,60,.14), rgba(220,20,60,.05) 55%, rgba(220,20,60,.08));
-    backdrop-filter:blur(8px) saturate(150%); -webkit-backdrop-filter:blur(8px) saturate(150%);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 10px 22px rgba(0,0,0,.28);
-  }
-  .cvi-play{
-    flex:none; width:46px; height:46px; border-radius:50%; border:1px solid rgba(255,190,205,.65);
-    background:linear-gradient(145deg, #e8163f, #a30f2e); color:#fff; cursor:pointer;
-    display:grid; place-items:center; padding:0;
-    box-shadow:0 8px 20px rgba(220,20,60,.42), inset 0 1px 0 rgba(255,255,255,.35);
-    transition:transform .15s ease, background .15s ease;
-  }
-  .cvi-play:hover{background:linear-gradient(145deg, #f21b4d, #c01236); transform:scale(1.04)}
-  .cvi-play:focus-visible{outline:2px solid var(--amber); outline-offset:3px}
-  .cvi-play .cvi-ico-play{font-size:16px; line-height:1; margin-left:2px}
-  .cvi-play .cvi-ico-pause{font-size:13px; line-height:1; letter-spacing:1px; display:none}
-  .course-voice-intro.is-playing .cvi-play .cvi-ico-play{display:none}
-  .course-voice-intro.is-playing .cvi-play .cvi-ico-pause{display:block}
-  .cvi-copy{flex:1; min-width:0}
-  .cvi-label{display:block; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--rose); margin-bottom:3px}
-  .cvi-quote{display:block; font-size:15.5px; line-height:1.4; color:#fff; font-weight:600}
-  .cvi-progress{height:3px; border-radius:999px; background:rgba(255,255,255,.14); margin-top:9px; overflow:hidden}
-  .cvi-bar{display:block; height:100%; width:0%; background:linear-gradient(90deg, var(--red-soft), var(--amber)); border-radius:999px; transition:width .2s linear}
-  .cvi-right{flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:5px}
-  .cvi-time{font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.08em; color:var(--faint)}
-  .cvi-eq{display:flex; gap:3px; align-items:flex-end; height:12px; opacity:0; transition:opacity .2s ease}
-  .course-voice-intro.is-playing .cvi-eq{opacity:1}
-  .cvi-eq i{display:block; width:3px; background:var(--amber); border-radius:2px; animation:cviEq 0.9s ease-in-out infinite}
-  .cvi-eq i:nth-child(1){height:7px} .cvi-eq i:nth-child(2){height:11px; animation-delay:.15s} .cvi-eq i:nth-child(3){height:6px; animation-delay:.3s} .cvi-eq i:nth-child(4){height:10px; animation-delay:.45s}
-  @keyframes cviEq{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
-  @media (prefers-reduced-motion: reduce){ .cvi-eq i{animation:none} .cvi-play{transition:none} }
-  @media (max-width:520px){
-    .course-voice-intro{padding:12px 13px; gap:11px}
-    .cvi-play{width:42px; height:42px}
-    .cvi-quote{font-size:14.5px}
-    .cvi-right{display:none}
-  }
   .course-facts{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px}
   .course-facts .chip b{color:var(--amber)}
   .module{
@@ -1230,7 +1215,7 @@
         <span class="sec-tag">▸ Supported By</span>
         <h2>Proud Sponsors</h2>
       </div>
-      <p>The businesses that back Crime Watch and the I.A.N Network — every sponsor ad from IanAlleyne.org, hosted right here so each one loads fast and starts playing as it scrolls into view.</p>
+      <p>The businesses that back Crime Watch and the I.A.N Network.</p>
     </div>
     <div class="sponsor-grid">
       <figure class="sponsor-card wide">
@@ -1271,23 +1256,6 @@
         <h2>Personal Safety and Situational Awareness</h2>
       </div>
       <p><strong style="color:#fff">Learn to spot danger before it spots you.</strong> Free video training from Ian — narrated video lessons for everyday life in Trinidad &amp; Tobago. Press play and learn.</p>
-    </div>
-
-    <div class="course-voice-intro" id="courseVoiceIntro">
-      <button class="cvi-play" id="courseIntroPlay" type="button" aria-label="Play training intro" aria-pressed="false">
-        <span class="cvi-ico-play" aria-hidden="true">▶</span>
-        <span class="cvi-ico-pause" aria-hidden="true">❚❚</span>
-      </button>
-      <div class="cvi-copy">
-        <span class="cvi-label">▶ Play Training Intro</span>
-        <span class="cvi-quote">“This course is brought to you by the IAN Network, simply because we care.”</span>
-        <div class="cvi-progress" aria-hidden="true"><span class="cvi-bar" id="courseIntroBar"></span></div>
-      </div>
-      <div class="cvi-right" aria-hidden="true">
-        <span class="cvi-eq"><i></i><i></i><i></i><i></i></span>
-        <span class="cvi-time" id="courseIntroTime">0:00</span>
-      </div>
-      <audio id="courseIntroAudio" src="assets/course-intro.mp3" preload="metadata"></audio>
     </div>
 
     <div class="course-intro">
@@ -1705,20 +1673,70 @@
 </script>
 <script>
 (function(){
-  // Background radar reveal: hidden at the top of the page on load;
-  // the first scroll makes it APPEAR instantly (html.radar-on, no fade)
-  // and it stays. A page that loads already scrolled (restored position,
-  // anchor link) gets the class immediately. Independent of the parallax
-  // script below so reduced-motion visitors still get the reveal.
+  // Background radar — TWO-WAY scroll gate. The radar's visibility is
+  // a pure function of the scroll position, re-evaluated continuously:
+  //   scrollY <= TOP_LIMIT  → radar OFF (html has no .radar-on)
+  //   scrollY >  TOP_LIMIT  → radar ON  (html.radar-on, appears instantly,
+  //                           no fade)
+  // It shows only while the visitor is scrolled down, and it DISAPPEARS
+  // again the moment they return to the top — by scrolling back up, by
+  // tapping the logo / homepage button (href="#top"), the Back-to-top
+  // button, the course Back link, or anything else that lands the page
+  // back at scrollY 0 — so it NEVER clutters the hero image or hero
+  // text. Every return-to-top path ends at scrollY 0 and fires scroll
+  // events on the way, so the one scroll listener catches them all;
+  // hashchange / pageshow (back-forward cache) / load / resize
+  // re-checks cover the paths that can move the page without a scroll
+  // event. The previous one-way latch (reveal once, stay on forever,
+  // listener removed) is exactly what left the radar sitting over the
+  // hero after a trip back to the top — it is gone. Independent of the
+  // parallax script below so reduced-motion visitors get the same
+  // behaviour.
   var root = document.documentElement;
-  function arm(){
-    if ((window.scrollY || window.pageYOffset || 0) > 2){
-      root.classList.add('radar-on');
-      window.removeEventListener('scroll', arm);
+  var TOP_LIMIT = 24;   // px — at or under this the page counts as "at the top"
+  var ticking = false;
+  function sync(){
+    ticking = false;
+    var y = window.scrollY || window.pageYOffset || 0;
+    // toggle() with an explicit force flag is a no-op when the state
+    // already matches, so this stays cheap on every scroll frame.
+    root.classList.toggle('radar-on', y > TOP_LIMIT);
+  }
+  function requestSync(){
+    if (!ticking){
+      ticking = true;
+      if (window.requestAnimationFrame) window.requestAnimationFrame(sync);
+      else sync();
     }
   }
-  if ((window.scrollY || window.pageYOffset || 0) > 2) root.classList.add('radar-on');
-  else window.addEventListener('scroll', arm, {passive:true});
+  function syncNow(){
+    // Immediate check for the moments a scroll event can be missed or
+    // has not fired yet — the class is corrected in the same task, so
+    // the radar never survives a return-to-top by even one frame.
+    ticking = false;
+    sync();
+  }
+  window.addEventListener('scroll', requestSync, {passive:true});
+  window.addEventListener('resize', requestSync);
+  window.addEventListener('hashchange', syncNow);
+  window.addEventListener('pageshow', syncNow);
+  window.addEventListener('load', syncNow);
+  // Belt and braces for "anything that returns to the top": any click
+  // on a same-page anchor (the logo / homepage button → #top included)
+  // or on the Back-to-top button re-checks on the next frame AND after
+  // a smooth scroll has had time to land, so even a browser that
+  // coalesces the final scroll events still ends with the radar off
+  // once the page is back at the top.
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    var hit = t && t.closest && t.closest('a[href^="#"], #toTop');
+    if (!hit) return;
+    if (window.requestAnimationFrame) window.requestAnimationFrame(syncNow);
+    else syncNow();
+    window.setTimeout(syncNow, 350);
+    window.setTimeout(syncNow, 900);
+  }, {passive:true});
+  syncNow();   // page load: at the top → hidden; restored mid-page → shown
 })();
 </script>
 <script>
@@ -2397,60 +2415,6 @@
     if (!document.hidden) playVisible();
   });
   window.addEventListener('load', playVisible);
-})();
-</script>
-<script>
-(function(){
-  // Vocal course intro — "This course is brought to you by the IAN
-  // Network, simply because we care." (Ethan, the course narrator).
-  // Bundled locally as assets/course-intro.mp3; never autoplays —
-  // the visitor taps Play. Compact crimson-glass player at the top
-  // of the course page view only.
-  var wrap = document.getElementById('courseVoiceIntro');
-  var btn = document.getElementById('courseIntroPlay');
-  var audio = document.getElementById('courseIntroAudio');
-  var bar = document.getElementById('courseIntroBar');
-  var timeEl = document.getElementById('courseIntroTime');
-  if (!wrap || !btn || !audio) return;
-  function fmt(s){
-    if (!isFinite(s) || s < 0) s = 0;
-    s = Math.floor(s);
-    return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
-  }
-  function setPlaying(on){
-    wrap.classList.toggle('is-playing', on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    btn.setAttribute('aria-label', on ? 'Pause training intro' : 'Play training intro');
-  }
-  btn.addEventListener('click', function(){
-    if (audio.paused){
-      var p = audio.play();
-      if (p && p.catch) p.catch(function(){ setPlaying(false); });
-    } else {
-      audio.pause();
-    }
-  });
-  audio.addEventListener('play', function(){ setPlaying(true); });
-  audio.addEventListener('pause', function(){ setPlaying(false); });
-  audio.addEventListener('ended', function(){
-    setPlaying(false);
-    if (bar) bar.style.width = '0%';
-    if (timeEl) timeEl.textContent = '0:00';
-    try { audio.currentTime = 0; } catch(e){}
-  });
-  audio.addEventListener('loadedmetadata', function(){
-    if (timeEl && isFinite(audio.duration)) timeEl.textContent = '0:00 / ' + fmt(audio.duration);
-  });
-  audio.addEventListener('timeupdate', function(){
-    if (!isFinite(audio.duration) || !audio.duration) return;
-    var pct = (audio.currentTime / audio.duration) * 100;
-    if (bar) bar.style.width = pct.toFixed(1) + '%';
-    if (timeEl) timeEl.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration);
-  });
-  // If the visitor leaves the course view while it is playing, stop it.
-  window.addEventListener('hashchange', function(){
-    if (window.location.hash !== '#/course' && !audio.paused) audio.pause();
-  });
 })();
 </script>
 </body>

@@ -101,21 +101,37 @@
   }
   /* ============ TACTICAL AMBIENT LAYER ============ */
   .px-tactical{top:0; left:0; right:0; height:100%}
-  /* — drifting scope viewfinder — */
+  /* — radar display, centred on the page: its centre point sits at the
+     visual centre of the viewport (the fixed stage fills the screen),
+     NOT aligned with the hero image. The pan animation below only
+     wanders a few vw/vh around that centre, so the display stays
+     centred while keeping its slow ambient drift.
+     SCROLL GATE: the radar is hidden on load and only APPEARS once
+     the visitor starts scrolling (the reveal script adds .radar-on to
+     <html> on first scroll; a page loaded already-scrolled gets it
+     immediately). There is NO fade — no opacity transition — so the
+     rings/sweep/waves/blips all appear instantly together. — */
   .scope-drift{
-    position:absolute; top:9%; left:54%; width:min(520px,72vw); aspect-ratio:1;
-    opacity:.26; animation:scopePan 42s ease-in-out infinite alternate; will-change:transform;
+    position:absolute; top:50%; left:50%; width:min(520px,72vw); aspect-ratio:1;
+    transform:translate(-50%,-50%);
+    opacity:0;
+    animation:scopePan 38s ease-in-out infinite alternate; will-change:transform;
   }
-  .scope-drift svg{width:100%; height:100%; display:block; overflow:visible; opacity:.95; filter:drop-shadow(0 0 2px rgba(255,45,85,.10))}
+  html.radar-on .scope-drift{opacity:.32}
+  .scope-drift svg{width:100%; height:100%; display:block; overflow:visible; opacity:.95; filter:drop-shadow(0 0 2px rgba(220,20,60,.18))}
   .scope-drift.small{
-    top:auto; bottom:-6%; left:-4%; width:min(300px,48vw); opacity:.16;
+    top:auto; bottom:-6%; left:-4%; width:min(300px,48vw); opacity:0;
     animation:scopePan2 54s ease-in-out infinite alternate;
   }
+  html.radar-on .scope-drift.small{opacity:.22}
+  /* gentle float: the whole display drifts a few vw/vh around the
+     page centre and breathes scale by a hair — the ambient wander the
+     old scope had, kept subtle and centred */
   @keyframes scopePan{
-    0%{transform:translate3d(-9vw,-2vh,0) scale(1)}
-    35%{transform:translate3d(-22vw,5vh,0) scale(1.04)}
-    68%{transform:translate3d(-6vw,13vh,0) scale(.98)}
-    100%{transform:translate3d(-28vw,7vh,0) scale(1.02)}
+    0%{transform:translate3d(calc(-50% - 3.5vw), calc(-50% - 2vh), 0) scale(1)}
+    35%{transform:translate3d(calc(-50% + 2vw), calc(-50% + 2.5vh), 0) scale(1.04)}
+    68%{transform:translate3d(calc(-50% + 3.5vw), calc(-50% - 2.5vh), 0) scale(.98)}
+    100%{transform:translate3d(calc(-50% - 2vw), calc(-50% + 2vh), 0) scale(1.02)}
   }
   @keyframes scopePan2{
     0%{transform:translate3d(2vw,0,0) scale(1)}
@@ -169,13 +185,14 @@
   .hud-corner.br{bottom:14px; right:14px; border-left:none; border-top:none}
   @media (max-width:640px){
     .hud-tag.t3{display:none}
-    .scope-drift{opacity:.20}
-    .scope-drift.small{opacity:.12}
+    html.radar-on .scope-drift{opacity:.28}
+    html.radar-on .scope-drift.small{opacity:.18}
     .laser-wrap{opacity:.65}
   }
   @media (prefers-reduced-motion: reduce){
     .px-layer{transform:none !important}
     .scope-drift,.laser-wrap,.laser-dot{animation:none !important}
+    .scope-drift{transition:none}
   }
   .wrap{position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:0 20px}
   a{color:inherit}
@@ -351,14 +368,35 @@
          .reticle are then hidden (figure.scope-in-shader) — they are
          the texture's source, not a second overlay.
        • No WebGL (fallback): the plain <img> plus the DOM reticle/SVG
-         overlay, exactly as before — there is no warp to desync from.
-     NO DOM MASK, ever: the retired Ian-shaped alpha mask
-     (ian1-scope-mask.png) was pinned to his RESTING outline while the
-     photo moved underneath it, printing his original cut-out line on
-     the background — the "weird outline while he moves". The shader
-     occlusion above replaces it; do not reintroduce a mask element. */
+         overlay, with the overlay silhouette-masked (see below) so the
+         scope still passes BEHIND Ian instead of over him.
+     FALLBACK OCCLUSION: whenever the DOM overlays are the visible scope
+     (figure NOT .scope-in-shader), they wear assets/ian1-scope-mask.png
+     as a CSS mask — alpha 0 over Ian's silhouette, 255 over the
+     background, feathered at the edge. mask-size:cover + centre
+     replicates the <img>'s object-fit:cover mapping exactly (mask and
+     photo are both 1280×853 in the same figure box), and in the
+     fallback the photo is STATIC inside the figure (transform:none;
+     parallax moves the whole #heroScope frame rigidly), so mask and
+     photo cannot drift apart. HISTORY: an earlier build pinned this
+     same mask to his resting outline while the photo itself was
+     CSS-transformed underneath it, printing his cut-out line on the
+     background — the "weird outline while he moves". That failure came
+     from the independent photo transform, not the mask: never give the
+     fallback photo its own transform again, or the mask must receive
+     the identical one. The shader path above is unchanged and still
+     hides these DOM overlays outright. */
   .scope figure.depth-on.scope-in-shader .hero-scope-svg,
   .scope figure.depth-on.scope-in-shader .reticle{visibility:hidden}
+  /* fallback occlusion: DOM scope overlays pass behind Ian's silhouette */
+  .scope figure:not(.scope-in-shader) .reticle,
+  .scope figure:not(.scope-in-shader) .hero-scope-svg{
+    -webkit-mask-image:url(assets/ian1-scope-mask.png);
+    mask-image:url(assets/ian1-scope-mask.png);
+    -webkit-mask-size:cover; mask-size:cover;
+    -webkit-mask-position:center; mask-position:center;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  }
   .scope img{width:100%; height:112%; object-fit:cover; aspect-ratio:4/3.4; will-change:transform; transform:scale(1.06)}
   .scope .hud{
     position:absolute; z-index:4; font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.14em;
@@ -378,6 +416,33 @@
   }
   .ring::before{content:""; position:absolute; left:50%; top:50%; width:5px; height:5px; transform:translate(-50%,-50%); border-radius:50%; background:rgba(255,77,109,.55); z-index:2}
   .ring::after{content:""; position:absolute; inset:12%; border:1px dashed rgba(255,160,180,.45); border-radius:50%}
+  /* — radar motion (BACKGROUND displays only — the drifting .scope-drift
+     SVGs; the hero frame keeps its original static sniper-scope artwork) —
+     sweep group rotates about the viewBox centre, wave rings expand out
+     from the centre and fade, blips pulse where contacts sit. */
+  .radar-sweep{transform-box:view-box; transform-origin:center; animation:radarSpin 7s linear infinite}
+  @keyframes radarSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  .radar-wave{transform-box:fill-box; transform-origin:center; animation:radarWave 3.8s linear infinite backwards}
+  .radar-wave.w2{animation-delay:1.9s}
+  @keyframes radarWave{0%{transform:scale(.18); opacity:.75}70%{opacity:.28}100%{transform:scale(1); opacity:0}}
+  /* — BIG waves (main background radar only): rings born at the radar
+     centre that expand to ~5× the display's size — over 2,000px across
+     on desktop — washing across almost the whole page and dying off as
+     they travel (opacity fades with distance). Three rings staggered
+     over an 11s cycle keep one always on the move. vector-effect on
+     the circles keeps the stroke hair-thin instead of ballooning with
+     the scale. The small secondary display keeps its local wave. */
+  .radar-wave.big{animation:radarWaveBig 11s linear infinite backwards}
+  .radar-wave.big.bw2{animation-delay:3.7s}
+  .radar-wave.big.bw3{animation-delay:7.4s}
+  @keyframes radarWaveBig{0%{transform:scale(.12); opacity:.65}45%{opacity:.26}75%{opacity:.10}100%{transform:scale(5.2); opacity:0}}
+  .radar-blip{transform-box:fill-box; transform-origin:center; animation:radarBlip 2.8s ease-in-out infinite}
+  .radar-blip.b2{animation-delay:.9s} .radar-blip.b3{animation-delay:1.7s}
+  @keyframes radarBlip{0%,100%{transform:scale(1); opacity:.95}50%{transform:scale(1.45); opacity:.55}}
+  @media (prefers-reduced-motion: reduce){
+    .radar-sweep,.radar-wave,.radar-blip{animation:none !important}
+    .radar-wave{opacity:0}
+  }
   .corner{position:absolute; width:30px; height:30px; border:3px solid var(--amber); z-index:2; opacity:.85}
   .c-tl{top:-3px; left:-3px; border-right:none; border-bottom:none; border-top-left-radius:20px}
   .c-tr{top:-3px; right:-3px; border-left:none; border-bottom:none; border-top-right-radius:20px}
@@ -765,43 +830,62 @@
   <div class="px-layer px-tactical" data-speed="0.18">
     <div class="scope-drift">
       <svg viewBox="0 0 400 400" fill="none" aria-hidden="true">
-        <circle cx="200" cy="200" r="188" stroke="rgba(255,110,140,.95)" stroke-width="1.6"/>
-        <circle cx="200" cy="200" r="172" stroke="rgba(255,160,180,.55)" stroke-width="1"/>
-        <circle cx="200" cy="200" r="118" stroke="rgba(255,110,140,.80)" stroke-width="1" stroke-dasharray="5 7"/>
-        <circle cx="200" cy="200" r="54" stroke="rgba(255,70,105,.95)" stroke-width="1.2"/>
-        <circle cx="200" cy="200" r="3.5" fill="#ff4d6d"/>
-        <!-- crosshair -->
-        <path d="M200 6v118M200 276v118M6 200h118M276 200h118" stroke="rgba(255,170,190,.95)" stroke-width="1.4"/>
-        <path d="M200 150v34M200 216v34M150 200h34M216 200h34" stroke="#ff4d6d" stroke-width="1.6"/>
-        <!-- mil dots -->
-        <g fill="rgba(255,170,190,.95)">
-          <circle cx="155" cy="200" r="2.2"/><circle cx="245" cy="200" r="2.2"/>
-          <circle cx="110" cy="200" r="2.2"/><circle cx="290" cy="200" r="2.2"/>
-          <circle cx="200" cy="155" r="2.2"/><circle cx="200" cy="245" r="2.2"/>
-          <circle cx="200" cy="110" r="2.2"/><circle cx="200" cy="290" r="2.2"/>
+        <!-- radar display: range rings, bearing ticks, rotating sweep,
+             expanding waves, contact blips -->
+        <circle cx="200" cy="200" r="188" stroke="rgba(255,77,109,.95)" stroke-width="1.6"/>
+        <circle cx="200" cy="200" r="172" stroke="rgba(255,130,155,.55)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="126" stroke="rgba(255,77,109,.75)" stroke-width="1"/>
+        <circle cx="200" cy="200" r="84" stroke="rgba(255,130,155,.60)" stroke-width="1" stroke-dasharray="5 7"/>
+        <circle cx="200" cy="200" r="42" stroke="rgba(220,20,60,.90)" stroke-width="1.2"/>
+        <!-- bearing ticks around the rim -->
+        <g stroke="rgba(255,130,155,.85)" stroke-width="1.4">
+          <path d="M200 8v16M200 376v16M8 200h16M376 200h16"/>
+          <path d="M296 35l-6 15M365 104l-15 6M365 296l-15-6M296 365l-6-15M104 365l6-15M35 296l15-6M35 104l15 6M104 35l6 15"/>
         </g>
-        <!-- rim ticks -->
-        <g stroke="rgba(255,170,190,.85)" stroke-width="1.4">
-          <path d="M200 8v14M200 378v14M8 200h14M378 200h14"/>
-          <path d="M66 66l10 10M324 324l10 10M334 66l-10 10M76 324l-10 10"/>
+        <!-- BIG expanding waves from the centre — they grow far beyond
+             the display itself, wash across the page and fade out -->
+        <circle class="radar-wave big" cx="200" cy="200" r="150" fill="none" stroke="rgba(255,77,109,.8)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+        <circle class="radar-wave big bw2" cx="200" cy="200" r="150" fill="none" stroke="rgba(255,77,109,.8)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+        <circle class="radar-wave big bw3" cx="200" cy="200" r="150" fill="none" stroke="rgba(255,77,109,.8)" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+        <!-- rotating sweep with fading trail + bright leading edge -->
+        <g class="radar-sweep">
+          <path d="M200 200 L200 26 A174 174 0 0 0 27 215 Z" fill="rgba(220,20,60,.05)"/>
+          <path d="M200 200 L200 26 A174 174 0 0 0 37 141 Z" fill="rgba(220,20,60,.08)"/>
+          <path d="M200 200 L200 26 A174 174 0 0 0 77 77 Z" fill="rgba(220,20,60,.13)"/>
+          <path d="M200 200 L200 26 A174 174 0 0 0 135 39 Z" fill="rgba(255,77,109,.20)"/>
+          <path d="M200 200v-174" stroke="#ff4d6d" stroke-width="2"/>
         </g>
-        <text x="208" y="42" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="2" fill="#ffd6de">RNG 184M</text>
-        <text x="208" y="368" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="2" fill="rgba(255,214,222,.90)">MIL 3.2 · WND 0</text>
+        <!-- contact blips -->
+        <g>
+          <circle class="radar-blip" cx="262" cy="128" r="4" fill="#ffd9e1"/>
+          <circle cx="262" cy="128" r="9" fill="none" stroke="rgba(255,217,225,.55)" stroke-width="1"/>
+          <circle class="radar-blip b2" cx="128" cy="262" r="3.4" fill="#ff8fa5"/>
+          <circle cx="128" cy="262" r="8" fill="none" stroke="rgba(255,77,109,.5)" stroke-width="1"/>
+          <circle class="radar-blip b3" cx="302" cy="268" r="3" fill="#ff8fa5"/>
+          <circle class="radar-blip" cx="150" cy="112" r="2.6" fill="rgba(255,217,225,.85)"/>
+        </g>
+        <circle cx="200" cy="200" r="3.5" fill="#dc143c"/>
       </svg>
     </div>
     <div class="scope-drift small">
       <svg viewBox="0 0 400 400" fill="none" aria-hidden="true">
-        <circle cx="200" cy="200" r="186" stroke="rgba(255,110,140,.95)" stroke-width="2"/>
-        <circle cx="200" cy="200" r="120" stroke="rgba(255,160,180,.65)" stroke-width="1.4" stroke-dasharray="5 8"/>
-        <path d="M200 10v380M10 200h380" stroke="rgba(255,170,190,.85)" stroke-width="1.4"/>
-        <circle cx="200" cy="200" r="4" fill="#ff4d6d"/>
+        <circle cx="200" cy="200" r="186" stroke="rgba(255,77,109,.95)" stroke-width="2"/>
+        <circle cx="200" cy="200" r="124" stroke="rgba(255,130,155,.65)" stroke-width="1.4"/>
+        <circle cx="200" cy="200" r="62" stroke="rgba(255,130,155,.55)" stroke-width="1.2" stroke-dasharray="5 8"/>
+        <g class="radar-sweep">
+          <path d="M200 200 L200 30 A170 170 0 0 0 70 91 Z" fill="rgba(220,20,60,.12)"/>
+          <path d="M200 200v-170" stroke="#ff4d6d" stroke-width="2.4"/>
+        </g>
+        <circle class="radar-wave" cx="200" cy="200" r="150" fill="none" stroke="rgba(255,77,109,.8)" stroke-width="2"/>
+        <circle class="radar-blip" cx="268" cy="140" r="4.5" fill="#ffd9e1"/>
+        <circle class="radar-blip b2" cx="138" cy="272" r="3.6" fill="#ff8fa5"/>
+        <circle cx="200" cy="200" r="4" fill="#dc143c"/>
       </svg>
     </div>
 
     <div class="laser-wrap"><span class="laser-line"></span><span class="laser-dot"></span></div>
     <div class="laser-wrap two"><span class="laser-line"></span><span class="laser-dot"></span></div>
 
-    <span class="hud-tag t3">Elev 12 · Az 047</span>
     <span class="hud-plus" style="top:38%;left:7%">+</span>
     <span class="hud-plus" style="top:70%;right:9%">+</span>
     <span class="hud-plus" style="top:12%;right:26%">+</span>
@@ -821,7 +905,7 @@
       <a href="#advertise">Advertise</a>
       <a href="#follow">Follow</a>
       <a href="#sponsors">Sponsors</a>
-      <a href="#course" class="nav-course">Free Course</a>
+      <a href="#course" class="nav-course">Free Training</a>
     </nav>
     <a class="btn btn-wa btn-sm" href="https://wa.me/18682944081" target="_blank" rel="noopener">WhatsApp a Tip</a>
     <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="siteNav" aria-label="Open menu">
@@ -933,14 +1017,14 @@
   <section id="course">
     <div class="sec-head">
       <div>
-        <span class="sec-tag">▸ Free Course · A Gift From I.A.N Network</span>
+        <span class="sec-tag">▸ Free Training · A Gift From I.A.N Network</span>
         <h2>Personal Safety and Situational Awareness</h2>
       </div>
-      <p><strong style="color:#fff">Learn to spot danger before it spots you.</strong> A free video course for the general public — practical lessons for everyday life in Trinidad &amp; Tobago.</p>
+      <p><strong style="color:#fff">Learn to spot danger before it spots you.</strong> Free video training for the general public — practical lessons for everyday life in Trinidad &amp; Tobago.</p>
     </div>
 
     <div class="course-intro course-teaser">
-      <p>Every night on Crime Watch, Ian sees the same thing: most trouble gives warning signs first. This short course teaches you to notice those signs early — at home, on the street, at the ATM — and know what to do next. <strong>Completely free. No payment, no account, no sign-up.</strong></p>
+      <p>Every night on Crime Watch, Ian sees the same thing: most trouble gives warning signs first. This short training teaches you to notice those signs early — at home, on the street, at the ATM — and know what to do next. <strong>Completely free. No payment, no account, no sign-up.</strong></p>
       <div class="course-outline">
         <div class="co-item"><span class="co-num">1</span><div><b>See It Coming</b><span>Awareness — train your eyes and habits</span></div></div>
         <div class="co-item"><span class="co-num">2</span><div><b>Streets &amp; Everyday Life</b><span>Walking, ATMs, parking, maxis and nights out</span></div></div>
@@ -955,7 +1039,7 @@
       </div>
       <div class="course-start">
         <a class="btn btn-red course-start-btn" href="#/course">Start Free Training →</a>
-        <span class="course-start-note">Opens the full course — watch on any phone or computer.</span>
+        <span class="course-start-note">Opens the full training — watch on any phone or computer.</span>
       </div>
     </div>
   </section>
@@ -1178,7 +1262,7 @@
   <div class="wrap" id="courseView" hidden>
     <div class="course-page-top">
       <a class="btn btn-ghost btn-sm" href="#course" id="courseBack">← Back to Home</a>
-      <span class="chip">FREE COURSE <b>Personal Safety &amp; Situational Awareness</b></span>
+      <span class="chip">FREE TRAINING <b>Personal Safety &amp; Situational Awareness</b></span>
     </div>
 
     <div class="sec-head">
@@ -1186,16 +1270,16 @@
         <span class="sec-tag">▸ Free for Everyone · No Login · No Paywall</span>
         <h2>Personal Safety and Situational Awareness</h2>
       </div>
-      <p><strong style="color:#fff">Learn to spot danger before it spots you.</strong> A free video course from Ian — narrated video lessons for everyday life in Trinidad &amp; Tobago. Press play and learn.</p>
+      <p><strong style="color:#fff">Learn to spot danger before it spots you.</strong> Free video training from Ian — narrated video lessons for everyday life in Trinidad &amp; Tobago. Press play and learn.</p>
     </div>
 
     <div class="course-voice-intro" id="courseVoiceIntro">
-      <button class="cvi-play" id="courseIntroPlay" type="button" aria-label="Play course intro" aria-pressed="false">
+      <button class="cvi-play" id="courseIntroPlay" type="button" aria-label="Play training intro" aria-pressed="false">
         <span class="cvi-ico-play" aria-hidden="true">▶</span>
         <span class="cvi-ico-pause" aria-hidden="true">❚❚</span>
       </button>
       <div class="cvi-copy">
-        <span class="cvi-label">▶ Play Course Intro</span>
+        <span class="cvi-label">▶ Play Training Intro</span>
         <span class="cvi-quote">“This course is brought to you by the IAN Network, simply because we care.”</span>
         <div class="cvi-progress" aria-hidden="true"><span class="cvi-bar" id="courseIntroBar"></span></div>
       </div>
@@ -1444,7 +1528,7 @@
     </div>
 
     <div class="course-note">
-      <strong>From Ian:</strong> “You don’t need money or a title to protect your family — you need your eyes open and a plan in your head before trouble comes. Share this course with somebody you love. And if you see something, say something — send your tip to <a href="https://wa.me/18682944081" target="_blank" rel="noopener">WhatsApp (868) 294-4081</a>. Anonymous, always. In an emergency, call <strong>999</strong>.”
+      <strong>From Ian:</strong> “You don’t need money or a title to protect your family — you need your eyes open and a plan in your head before trouble comes. Share this training with somebody you love. And if you see something, say something — send your tip to <a href="https://wa.me/18682944081" target="_blank" rel="noopener">WhatsApp (868) 294-4081</a>. Anonymous, always. In an emergency, call <strong>999</strong>.”
     </div>
   </div>
 
@@ -1461,7 +1545,7 @@
         <a href="https://www.facebook.com/tntcrimewatch" target="_blank" rel="noopener">Facebook Live — /tntcrimewatch</a>
         <a href="https://www.tiktok.com/@i.a.n.network" target="_blank" rel="noopener">TikTok — @i.a.n.network</a>
         <a href="https://www.instagram.com/i.a.n.network" target="_blank" rel="noopener">Instagram — @i.a.n.network</a>
-        <a href="#course">Free Course — Personal Safety</a>
+        <a href="#course">Free Training — Personal Safety</a>
       </div>
       <div class="col">
         <h4>Contact</h4>
@@ -1617,6 +1701,24 @@
   }
   tick();
   setInterval(tick, 1000);
+})();
+</script>
+<script>
+(function(){
+  // Background radar reveal: hidden at the top of the page on load;
+  // the first scroll makes it APPEAR instantly (html.radar-on, no fade)
+  // and it stays. A page that loads already scrolled (restored position,
+  // anchor link) gets the class immediately. Independent of the parallax
+  // script below so reduced-motion visitors still get the reveal.
+  var root = document.documentElement;
+  function arm(){
+    if ((window.scrollY || window.pageYOffset || 0) > 2){
+      root.classList.add('radar-on');
+      window.removeEventListener('scroll', arm);
+    }
+  }
+  if ((window.scrollY || window.pageYOffset || 0) > 2) root.classList.add('radar-on');
+  else window.addEventListener('scroll', arm, {passive:true});
 })();
 </script>
 <script>
@@ -1904,7 +2006,18 @@
     // ghost outline. The scope itself is sampled at vUv (SCREEN
     // space): a real viewfinder does not warp with the photo.
     '  if (uScopeOn > 0.5){',
-    '    float ianMask = depthAt(suv);',
+    // MASK-ONLY SHARPENING: depthAt's wide feather is what the WARP
+    // needs (it keeps the sampling fold-free), but as an occlusion
+    // matte it leaves the scope half-visible across his hairline and
+    // pointing hand, where the blurred depth never saturates. The
+    // scope therefore remaps the SAME depth through a tighter curve —
+    // fully occluded from 0.62 up, fully open below 0.22 — so the
+    // rings read as passing behind him, hand included, while a slim
+    // feather keeps the cut soft. The warp above still uses depthAt
+    // untouched; only the scope's alpha sees the sharpened mask.
+    '    float ianRaw = depthAt(suv);',
+    '    float ianMask = clamp((ianRaw - 0.22) / 0.40, 0.0, 1.0);',
+    '    ianMask = ianMask * ianMask * (3.0 - 2.0 * ianMask);',
     '    vec4 scopeTex = texture2D(uScope, vUv);',
     '    col = mix(col, scopeTex.rgb, scopeTex.a * (1.0 - ianMask));',
     '  }',
@@ -2013,34 +2126,66 @@
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   };
 
-  // First-frame readback: run synchronously right after the first draw
-  // (same task, so the drawing buffer is still readable). Ian's photo is
+  // First-frame readback: run synchronously right after a draw (same
+  // task, so the drawing buffer is still readable). Ian's photo is
   // bright and colourful — skin, white cuffs and glasses, blue backdrop —
-  // so if EVERY sampled pixel comes back ~black, this device's GPU handed
-  // us a dead texture and the canvas would show as a black shadow. Drop
-  // the canvas; the untouched photo underneath takes over seamlessly.
+  // so if the sampled pixels come back ~black, this device's GPU handed
+  // us a dead photo texture and the canvas would show as a black shadow.
+  // Drop the canvas; the untouched photo underneath takes over seamlessly.
+  // THE S24 DeX FAILURE this now guards against: the old probe sampled
+  // WITH the scope/radar texture composited and passed on the FIRST lit
+  // pixel — the artwork's own bright strokes (its centre mark sat right
+  // on the centre sample) lit the probe even when the PHOTO texture
+  // itself was dead, so depth-on hid the <img> and the visitor saw the
+  // background graphics over black where Ian should be. The probe now
+  // draws its test frame with the artwork texture switched OFF (photo
+  // only) and demands SEVERAL lit samples spread across the frame
+  // before the canvas is allowed to become the visible hero.
+  function dropCanvas(){
+    dead = true;
+    glDraw = null;
+    glLive = false;   // <img> becomes the single moving surface again
+    fig.classList.remove('depth-on');
+    fig.classList.remove('scope-in-shader');
+    wake();
+  }
+  function photoPixelsLit(){
+    // draw a photo-only frame (artwork off) and read it back — returns
+    // true only if at least 3 of the spread samples are clearly lit
+    var W = canvas.width, H = canvas.height;
+    if (!W || !H || !glDraw) return false;
+    var saved = scopeTexReady;
+    scopeTexReady = false;
+    glDraw(cX, cY);
+    scopeTexReady = saved;
+    var px = new Uint8Array(4);
+    var lit = 0;
+    var pts = [[0.5,0.5],[0.5,0.3],[0.62,0.35],[0.4,0.6],[0.5,0.75],[0.25,0.5],[0.75,0.5],[0.6,0.85]];
+    for (var i = 0; i < pts.length; i++){
+      gl.readPixels(Math.floor(W * pts[i][0]), Math.floor(H * pts[i][1]), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      if (px[0] + px[1] + px[2] > 48) lit++;
+    }
+    return lit >= 3;
+  }
   var probed = false;
   function probeFirstFrame(){
     if (probed || dead) return;
     probed = true;
     try {
-      var W = canvas.width, H = canvas.height;
-      if (!W || !H) return;
-      var px = new Uint8Array(4);
-      var lit = false;
-      var pts = [[0.5,0.5],[0.5,0.3],[0.62,0.35],[0.4,0.6],[0.5,0.75],[0.25,0.5],[0.75,0.5],[0.6,0.85]];
-      for (var i = 0; i < pts.length; i++){
-        gl.readPixels(Math.floor(W * pts[i][0]), Math.floor(H * pts[i][1]), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-        if (px[0] + px[1] + px[2] > 48){ lit = true; break; }
-      }
-      if (!lit){
-        dead = true;
-        glDraw = null;
-        glLive = false;
-        fig.classList.remove('depth-on');
-        fig.classList.remove('scope-in-shader');
-      }
+      if (!photoPixelsLit()) dropCanvas();
     } catch(e){ /* readback unavailable on this driver — leave as drawn */ }
+  }
+  // Second check, ~1s after going live: some mobile GPUs accept the
+  // texture upload, pass an immediate readback, then present black once
+  // the surface is composited at full size. Re-draw and re-read inside
+  // one rAF task; if the photo has vanished, drop to the <img> — the
+  // visitor keeps Ian either way.
+  function recheckLiveFrame(){
+    if (dead || !glLive) return;
+    try {
+      if (!photoPixelsLit()) dropCanvas();
+      else if (glDraw) glDraw(cX, cY);   // restore the artwork-composited frame
+    } catch(e){ /* leave as drawn */ }
   }
 
   /* ---------- scope texture: the viewfinder, rasterised once ----------
@@ -2130,6 +2275,12 @@
     // (scopeTexReady stays false): the hero goes live without the
     // in-shader scope and the DOM overlay stays as the fallback.
     if (++loaded !== 3) return;
+    // A "loaded" image with no decoded pixels (a decode failure some
+    // mobile browsers still report through onload) would upload as a
+    // black texture — refuse it here so the plain <img> stays visible.
+    if (!photoImg.naturalWidth || !photoImg.naturalHeight || !depthImg.naturalWidth || !depthImg.naturalHeight){
+      failed = true; glDraw = null; return;
+    }
     makeTex(photoImg, 0);
     makeTex(depthImg, 1);
     if (gl.getError() !== gl.NO_ERROR){ failed = true; glDraw = null; return; }
@@ -2145,6 +2296,11 @@
     if (scopeTexReady) fig.classList.add('scope-in-shader');
     window.addEventListener('resize', resize);
     wake();
+    // delayed second verification (see recheckLiveFrame): if this GPU
+    // loses the photo after compositing, the <img> fallback takes over
+    window.setTimeout(function(){
+      window.requestAnimationFrame(recheckLiveFrame);
+    }, 1100);
   }
   function oneFail(){ failed = true; }
   photoImg.onload = oneReady;
@@ -2264,7 +2420,7 @@
   function setPlaying(on){
     wrap.classList.toggle('is-playing', on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    btn.setAttribute('aria-label', on ? 'Pause course intro' : 'Play course intro');
+    btn.setAttribute('aria-label', on ? 'Pause training intro' : 'Play training intro');
   }
   btn.addEventListener('click', function(){
     if (audio.paused){
